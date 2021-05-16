@@ -1,0 +1,27 @@
+{
+    "pluginmetadataversion": 2,
+    "name": "Fuzzable",
+    "author": "Alan",
+    "type": [
+        "ui"
+    ],
+    "api": [
+        "python3"
+    ],
+    "description": "Automatically identify fuzzable targets",
+    "license": {
+        "name": "MIT"
+    },
+    "platforms": [
+        "Darwin",
+        "Windows",
+        "Linux"
+   ],
+   "installinstructions": {
+       "Darwin": "",
+       "Windows": "",
+       "Linux": ""
+   },
+   "version": "1.0",
+   "minimumbinaryninjaversion": 1500
+}
