@@ -5,6 +5,7 @@ fuzzable.py
     Binary Ninja helper plugin for fuzzable target discovery.
 """
 from binaryninja import *
+from functions import functions
 
 # if switched, will skip all analysis of stripped symbols
 SKIP_STRIPPED = False
@@ -15,7 +16,7 @@ DEPTH_THRESHOLD = 4
 # interesting patterns to parse for in unstripped symbols when determining fuzzability
 INTERESTING_PATTERNS = ["Parse", "Read", "Buf", "File", "Input", "String"]
 
-# patterns to skip over and not care about
+# patterns to skip over and not care about, including all glibc functions
 SKIP_PATTERNS = [
     # constructor and destructor
     "_init",
@@ -30,7 +31,16 @@ SKIP_PATTERNS = [
     "__hfuzz",
 ]
 
-FUNCTION_SIGNATURES = [[]]
+# also ignore including all glibc symbols
+GLIBC_NAMES = functions.keys()
+
+# represents function arguments to check for
+FUNCTION_SIGNATURES = [
+    # func(char *buffer, size_t size)
+    ["char *", "int64_t"],
+
+    ["char *"],
+]
 
 
 class FuzzableAnalysis(BackgroundTaskThread):
@@ -43,16 +53,19 @@ class FuzzableAnalysis(BackgroundTaskThread):
         self.name = root.name
         log_info(f"Starting analysis for: function: {self.name}")
 
-        self.args = root.parameter_vars
-
         # analyze function name properties
         self.stripped = "sub_" in self.name
         if not self.stripped:
             self.interesting_name = any(
-                [pattern in self.name for pattern in INTERESTING_PATTERNS]
+                [pattern in self.name or pattern.lower() in self.name
+                for pattern in INTERESTING_PATTERNS]
             )
 
-        #
+        # analyze function arguments for fuzzable patterns
+        self.args = root.parameter_vars
+        self.interesting_func_sig = None
+        if not self.args is None or len(self.args) != 0:
+            log_info(str(self.args))
 
         # more depth represents maximizing code coverage when fuzzing
         self.depth = 0
@@ -78,6 +91,9 @@ class FuzzableAnalysis(BackgroundTaskThread):
                 score += 1
 
         # function signature can directly consume fuzzer input
+        if not self.args is None:
+            if len(self.args) != 0:
+                score += 1
 
         # function achieved a high threshold of coverage
         if self.depth >= DEPTH_THRESHOLD:
