@@ -1,3 +1,4 @@
+# Exported from Zach Riggle's functions project (https://github.com/zachriggle/functions)
 import collections
 Function = collections.namedtuple('Function', ('type', 'derefcnt', 'name', 'args'))
 Argument = collections.namedtuple('Argument', ('type', 'derefcnt', 'name'))
