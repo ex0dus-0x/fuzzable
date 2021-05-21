@@ -13,13 +13,7 @@ INTERESTING_PATTERNS = ["Parse", "Read", "Buf", "File", "Input", "String"]
 # imported names of common functions, including glibc calls to ignore
 COMMON_FUNCS = functions.keys()
 
-# represents function arguments to check for
-FUNCTION_SIGNATURES = [
-    # func(char *buffer, size_t size)
-    ["char *", "int64_t"],
-    ["char *"],
-]
-
+# configurable settings to tune
 Settings().register_group("fuzzable", "Fuzzable")
 Settings().register_setting(
     "fuzzable.depth_threshold",
@@ -70,10 +64,11 @@ class FuzzableAnalysis:
 
         # analyze function arguments for fuzzable patterns
         self.args = target.parameter_vars
-        self.interesting_func_sig = None
-        if not self.args is None or len(self.args) != 0:
-            # log_info(str(self.args))
-            pass
+        self.interesting_args = False
+        for arg in self.args:
+            if arg.type == "char*":
+                self.interesting_args = True
+                break
 
         # a higher depth means more code coverage for the fuzzer, makes function more viable for testing
         # recursive calls to self mean higher cyclomatic complexity, also increases viability for testing
@@ -81,7 +76,7 @@ class FuzzableAnalysis:
 
     def __str__(self):
         """ Output as a Markdown row when displaying back to user """
-        return f"| {self.name} | {self.fuzzability} | {self.depth} | {self.cycles} |\n"
+        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.cycles} |\n"
 
     @staticmethod
     def get_callgraph_complexity(target):
@@ -129,9 +124,8 @@ class FuzzableAnalysis:
                 score += 1
 
         # FIXME: function signature can directly consume fuzzer input
-        if not self.args is None:
-            if len(self.args) != 0:
-                score += 1
+        if self.interesting_args:
+            score += 1
 
         # function achieved an optimal threshold of coverage to be fuzzed
         threshold = int(Settings().get_string("fuzzable.depth_threshold"))
@@ -151,7 +145,7 @@ class WrapperTask(BackgroundTaskThread):
         log_info(f"Starting target discovery against {len(funcs)} functions")
 
         # final markdown table to be presented to user, with headers created first
-        markdown_result = "| Function Name | Fuzzability | Coverage Depth | Detected Cycles |\n| :--- | :--- | :--- | :--- |\n"
+        markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Detected Cycles |\n| :--- | :--- | :--- | :--- |\n"
 
         # stores all parsed analysis objects
         parsed = []
@@ -182,6 +176,8 @@ class WrapperTask(BackgroundTaskThread):
         # sort parsed by highest fuzzability score
         parsed = sorted(parsed, key=lambda x: x.fuzzability, reverse=True)
 
+        # TODO sort again but by depth and cycles
+
         # add ranked results as rows to final markdown table
         for analysis in parsed:
             markdown_result += str(analysis)
@@ -195,5 +191,9 @@ def run_fuzzable(view):
 
 
 PluginCommand.register(
-    "View fuzzable targets", "Identify and generate targets for fuzzing", run_fuzzable
+    "Fuzzable\\View fuzzable targets", "Identify and generate targets for fuzzing", run_fuzzable
+)
+
+PluginCommand.register(
+    "Fuzzable\\Export fuzzability report as CSV", "Identify and generate targets for fuzzing", run_fuzzable
 )
