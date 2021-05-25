@@ -1,3 +1,8 @@
+/* 
+ * linux_harness.cpp
+ *
+ */
+
 #include <dlfcn.h>
 #include <alloca.h>
 #include <stdio.h>
@@ -14,7 +19,6 @@ typedef int64_t (*bn_dv_buffer_t)(int64_t*, int64_t*);
 // void* BNCreateBinaryDataViewFromFilename(int64_t *dataview, char *filename);
 typedef void* (*bn_dv_filename_t)(int64_t*, char*);
 
-// int64_t BNFreeBinaryView();
 
 // points to shared object being preloaded
 void* core_handle = NULL;

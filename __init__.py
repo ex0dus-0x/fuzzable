@@ -11,6 +11,7 @@ from .functions import functions
 INTERESTING_PATTERNS = ["Parse", "Read", "Buf", "File", "Input", "String"]
 
 # imported names of common functions, including glibc calls to ignore
+# TODO: determine based on executable format in current view
 COMMON_FUNCS = functions.keys()
 
 # configurable settings to tune
@@ -28,6 +29,19 @@ Settings().register_setting(
 )
 
 Settings().register_setting(
+    "fuzzable.cycle_threshold",
+    """
+    {
+        "title"         : "Callgraph recursive cycle threshold",
+        "description"   : "Minimum number of recursive cycles in a given function call graph to be considered optimal for fuzzing.",
+        "type"          : "string",
+        "default"       : "10"
+    }
+""",
+)
+
+
+Settings().register_setting(
     "fuzzable.skip_stripped",
     """
     {
@@ -36,12 +50,12 @@ Settings().register_setting(
         "type"          : "boolean",
         "default"       : false
     }
-"""
+""",
 )
 
 
 class FuzzableAnalysis:
-    """ 
+    """
     Wraps and handles analysis of a single valid function from a binary view,
     calculating a fuzzability score based on varying metrics, and outputs a
     markdown row for final table output.
@@ -54,6 +68,7 @@ class FuzzableAnalysis:
 
         # analyze function name properties
         self.stripped = "sub_" in self.name
+        self.interesting_name = False
         if not self.stripped:
             self.interesting_name = any(
                 [
@@ -74,9 +89,13 @@ class FuzzableAnalysis:
         # recursive calls to self mean higher cyclomatic complexity, also increases viability for testing
         (self.depth, self.cycles) = FuzzableAnalysis.get_callgraph_complexity(target)
 
-    def __str__(self):
+    def markdown_row(self):
         """ Output as a Markdown row when displaying back to user """
         return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.cycles} |\n"
+
+    def csv_row(self):
+        """ Generate a CSV row for exporting to file """
+        return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.cycles}, {self.fuzzability}\n"
 
     @staticmethod
     def get_callgraph_complexity(target):
@@ -101,7 +120,10 @@ class FuzzableAnalysis:
             for child in func.callees:
                 if child.name not in visited:
                     callstack += [child]
-                else:
+
+                # increment cycle if recursive child is primary target itself,
+                # not another subroutine within the callgraph
+                elif child.name == target.name:
                     cycles += 1
 
             visited += [func.name]
@@ -128,16 +150,27 @@ class FuzzableAnalysis:
             score += 1
 
         # function achieved an optimal threshold of coverage to be fuzzed
-        threshold = int(Settings().get_string("fuzzable.depth_threshold"))
-        if self.depth >= threshold:
+        depth_threshold = int(Settings().get_string("fuzzable.depth_threshold"))
+        if self.depth >= depth_threshold:
             score += 1
+
+        # function demonstrated high level of cyclic complexity, optimal for fuzzing
+        cycles_threshold = int(Settings().get_string("fuzzable.cycle_threshold"))
+
+        """ 
+        TODO: more testing to determine if metric should be incorporated
+        if self.cycles >= cycles_threshold:
+            score += 1
+        """
 
         return score
 
 
 class WrapperTask(BackgroundTaskThread):
     def __init__(self, view):
-        super(WrapperTask, self).__init__('Finding fuzzable targets in current binary view')
+        super(WrapperTask, self).__init__(
+            "Finding fuzzable targets in current binary view"
+        )
         self.view = view
 
     def run(self):
@@ -146,6 +179,9 @@ class WrapperTask(BackgroundTaskThread):
 
         # final markdown table to be presented to user, with headers created first
         markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Detected Cycles |\n| :--- | :--- | :--- | :--- |\n"
+
+        # append to CSV buffer if user chooses to export after analysis
+        csv_out = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
 
         # stores all parsed analysis objects
         parsed = []
@@ -178,9 +214,14 @@ class WrapperTask(BackgroundTaskThread):
 
         # TODO sort again but by depth and cycles
 
-        # add ranked results as rows to final markdown table
+        # add ranked results as rows to final markdown table and CSV if user chooses to export
         for analysis in parsed:
-            markdown_result += str(analysis)
+            markdown_result += analysis.markdown_row()
+            csv_out += analysis.csv_row()
+
+        self.view.store_metadata("csv", csv_out)
+
+        # output report back to user
         show_markdown_report("Fuzzable targets", markdown_result)
 
 
@@ -190,10 +231,34 @@ def run_fuzzable(view):
     task.start()
 
 
+def run_export_report(view):
+    """ Generate a report from a previous analysis, and export as CSV """
+    log_info("Attempting to export results to CSV")
+    try:
+        csv_output = view.query_metadata("csv")
+    except KeyError:
+        show_message_box("Error", "Cannot export without running an analysis first.")
+        return
+
+    # write last analysis to filepath
+    csv_file = get_save_filename_input("Filename to export as CSV?", "csv")
+    csv_file = csv_file.decode("utf-8") + ".csv"
+
+    log_info(f"Writing to filepath {csv_file}")
+    with open(csv_file, "w+") as fd:
+        fd.write(csv_output)
+
+    show_message_box("Success", f"Done, exported to {csv_file}")
+
+
 PluginCommand.register(
-    "Fuzzable\\View fuzzable targets", "Identify and generate targets for fuzzing", run_fuzzable
+    "Fuzzable\\Analyze fuzzable targets",
+    "Identify and generate targets for fuzzing",
+    run_fuzzable,
 )
 
 PluginCommand.register(
-    "Fuzzable\\Export fuzzability report as CSV", "Identify and generate targets for fuzzing", run_fuzzable
+    "Fuzzable\\Export fuzzability report as CSV",
+    "Identify and generate targets for fuzzing",
+    run_export_report,
 )
