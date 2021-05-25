@@ -5,14 +5,9 @@ fuzzable.py
     Binary Ninja helper plugin for fuzzable target discovery.
 """
 from binaryninja import *
-from .functions import functions
 
 # interesting patterns to parse for in unstripped symbols when determining fuzzability
 INTERESTING_PATTERNS = ["Parse", "Read", "Buf", "File", "Input", "String"]
-
-# imported names of common functions, including glibc calls to ignore
-# TODO: determine based on executable format in current view
-COMMON_FUNCS = functions.keys()
 
 # configurable settings to tune
 Settings().register_group("fuzzable", "Fuzzable")
@@ -145,7 +140,7 @@ class FuzzableAnalysis:
             if self.interesting_name:
                 score += 1
 
-        # FIXME: function signature can directly consume fuzzer input
+        # function signature can directly consume fuzzer input
         if self.interesting_args:
             score += 1
 
@@ -189,9 +184,10 @@ class WrapperTask(BackgroundTaskThread):
         # iterate over each symbol
         for func in funcs:
             name = func.name
+            symbol = func.symbol.type
 
-            # ignore common functions from other known libraries
-            if any([pattern == name for pattern in COMMON_FUNCS]):
+            # ignore imported functions from other libraries, ie glibc or win32api
+            if (symbol is SymbolType.ImportedFunctionSymbol) or (symbol is SymbolType.LibraryFunctionSymbol):
                 log_info(f"Skipping analysis for known function {name}")
                 continue
 
@@ -212,13 +208,14 @@ class WrapperTask(BackgroundTaskThread):
         # sort parsed by highest fuzzability score
         parsed = sorted(parsed, key=lambda x: x.fuzzability, reverse=True)
 
-        # TODO sort again but by depth and cycles
+        # TODO sort again but by depth
 
         # add ranked results as rows to final markdown table and CSV if user chooses to export
         for analysis in parsed:
             markdown_result += analysis.markdown_row()
             csv_out += analysis.csv_row()
 
+        # store CSV output to memory
         self.view.store_metadata("csv", csv_out)
 
         # output report back to user
@@ -250,6 +247,10 @@ def run_export_report(view):
 
     show_message_box("Success", f"Done, exported to {csv_file}")
 
+def run_harness_generation(view, func):
+    """ Experimental automatic fuzzer harness generation support """
+    pass
+
 
 PluginCommand.register(
     "Fuzzable\\Analyze fuzzable targets",
@@ -261,4 +262,10 @@ PluginCommand.register(
     "Fuzzable\\Export fuzzability report as CSV",
     "Identify and generate targets for fuzzing",
     run_export_report,
+)
+
+PluginCommand.register_for_function(
+    "Fuzzable\\Generate fuzzing harness (EXPERIMENTAL, C/C++ ONLY)",
+    "For a target function, generate a AFL/libFuzzer C++ harness",
+    run_harness_generation,
 )
