@@ -28,7 +28,7 @@ typedef {RET_TYPE} (*{NAME}_t)({ARGS});
 
 /* === Manually add any other aliases here, such as pointers responsible for freeing up resources === */
 
-void *handle = NULL;
+void* handle = NULL;
 
 void CloseLibrary(void)
 {
@@ -50,13 +50,13 @@ int LoadLibrary(void)
 
 
 #ifdef LIBFUZZER
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size)
 #else
 int main (int argc, char** argv)
 #endif
 {
     // buffer used to store final parsed fuzzed data (libFuzzer)
-    int64_t *buf;
+    int64_t* buf;
 
     // arbitrary pointer to file metadata
     int64_t metadata;
@@ -82,7 +82,7 @@ int main (int argc, char** argv)
 #else
     if (argc != 2)
         return -1;
-    char *filepath = argv[1];
+    char* filepath = argv[1];
 
 #endif
 
@@ -91,7 +91,7 @@ int main (int argc, char** argv)
     {NAME}_t {NAME} =
         ({NAME}_t) dlsym(handle, "{NAME}");
 
-    {RET_TYPE} *res = {NAME}(/* TODO: fill in arguments here */);
+    {RET_TYPE} res = {NAME}(/* TODO: fill in arguments here */);
 
     /* TODO: handle return value logic */
    
