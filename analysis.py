@@ -44,22 +44,30 @@ class FuzzableAnalysis:
 
         # a higher depth means more code coverage for the fuzzer, makes function more viable for testing
         # recursive calls to self mean higher cyclomatic complexity, also increases viability for testing
-        (self.depth, self.cycles) = FuzzableAnalysis.get_callgraph_complexity(target)
+        (self.depth, self.recursive) = FuzzableAnalysis.get_callgraph_complexity(target)
+
+        # natural loop / iteration detected is often good behavior for a fuzzer to test, such as walking/scanning over
+        # input data (aka might be a good place to find off-by-ones). Does not account for any type of basic-block obfuscation.
+        #self.cycles = FuzzableAnalysis.get_cycle_complexity(target)
+        self.cycles = 0
 
     def markdown_row(self):
         """ Output as a Markdown row when displaying back to user """
-        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.cycles} |\n"
+        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.recursive} |\n"
 
     def csv_row(self):
         """ Generate a CSV row for exporting to file """
         return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.cycles}, {self.fuzzability}\n"
 
     @staticmethod
-    def get_callgraph_complexity(target):
-        """ Helper that recurses the callgraph and calculates its depth and cyclomatic complexity """
+    def get_callgraph_complexity(target) -> (int, bool):
+        """
+        Calculates coverage depth by doing a depth first search on function call graph,
+        return a final depth and flag denoting recursive implementation
+        """
 
         depth = 0
-        cycles = 0
+        recursive = False
 
         # stores only the name of the symbol we've already visited, is less expensive
         visited = []
@@ -78,21 +86,52 @@ class FuzzableAnalysis:
                 if child.name not in visited:
                     callstack += [child]
 
+                # set flag if function makes call at some point back to current target,
                 # increment cycle if recursive child is primary target itself,
-                # not another subroutine within the callgraph
+                # meaning, there is recursion involved.
                 elif child.name == target.name:
-                    cycles += 1
+                    recursive = True
 
             visited += [func.name]
 
-        return (depth, cycles)
+        return (depth, recursive)
+
+    @staticmethod
+    def get_cycle_complexity(target):
+        """
+        TODO: Helper that does iterative loop detection by doing same depth-first search, but instead
+        at a basic-block level.
+        """
+
+        cycles = 0
+        visited = []
+
+        # stores current basic-block that we want to analyze
+        callstack = [target]
+        while callstack:
+
+            # get next block under test, and iterate over children. any blocks that
+            # loops back to a visited basic block as a back edge indicates a natural loop
+            bb = callstack.pop()
+
+            # use MLIL for a much more accurate basic-block grouping of instructions
+            for child in bb.mlil_basic_blocks:
+                if child not in visited:
+                    callstack += [child]
+                else:
+                    cycles += 1
+
+            visited += [bb]
+
+        return cycles
 
     @property
-    def fuzzability(self):
-        """
+    def fuzzability(self) -> float:
+        """ 
         Calculate a final fuzzability score once analysis is completed.
         """
-        score = 0
+
+        score = 0.0
 
         # function is publicly exposed
         if not self.stripped:
@@ -113,11 +152,13 @@ class FuzzableAnalysis:
 
         # function demonstrated high level of cyclic complexity, optimal for fuzzing
         cycles_threshold = int(Settings().get_string("fuzzable.cycle_threshold"))
-
-        """ 
-        TODO: more testing to determine if metric should be incorporated
         if self.cycles >= cycles_threshold:
             score += 1
+
+        """
+        # auxiliary: recursive call to self increases score not as much
+        if self.recursive:
+            score += 0.5
         """
 
         return score

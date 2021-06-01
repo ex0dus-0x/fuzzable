@@ -48,7 +48,7 @@ Settings().register_setting(
     """
     {
         "title"         : "Skip stripped functions for analysis",
-        "description"   : "Turn on if stripped functions are abundant and costly to analyze.",
+        "description"   : "Turn on if stripped functions are abundant and costly to analyze, and known to be irrelevant.",
         "type"          : "boolean",
         "default"       : false
     }
@@ -68,7 +68,7 @@ class WrapperTask(BackgroundTaskThread):
         log.log_info(f"Starting target discovery against {len(funcs)} functions")
 
         # final markdown table to be presented to user, with headers created first
-        markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Detected Cycles |\n| :--- | :--- | :--- | :--- |\n"
+        markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Recursive? |\n| :--- | :--- | :--- | :--- |\n"
 
         # append to CSV buffer if user chooses to export after analysis
         csv_out = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
@@ -102,10 +102,8 @@ class WrapperTask(BackgroundTaskThread):
             analysis = FuzzableAnalysis(func)
             parsed += [analysis]
 
-        # sort parsed by highest fuzzability score
-        parsed = sorted(parsed, key=lambda x: x.fuzzability, reverse=True)
-
-        # TODO sort again but by depth
+        # sort parsed by highest fuzzability score and coverage depth
+        parsed = sorted(parsed, key=lambda x: (x.fuzzability, x.depth), reverse=True)
 
         # add ranked results as rows to final markdown table and CSV if user chooses to export
         for analysis in parsed:
