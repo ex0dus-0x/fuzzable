@@ -48,8 +48,7 @@ class FuzzableAnalysis:
 
         # natural loop / iteration detected is often good behavior for a fuzzer to test, such as walking/scanning over
         # input data (aka might be a good place to find off-by-ones). Does not account for any type of basic-block obfuscation.
-        #self.cycles = FuzzableAnalysis.get_cycle_complexity(target)
-        self.cycles = 0
+        self.cycles = FuzzableAnalysis.get_cycle_complexity(target)
 
     def markdown_row(self):
         """ Output as a Markdown row when displaying back to user """
@@ -99,29 +98,34 @@ class FuzzableAnalysis:
     @staticmethod
     def get_cycle_complexity(target):
         """
-        TODO: Helper that does iterative loop detection by doing same depth-first search, but instead
+        Helper that does iterative loop detection by doing same depth-first search, but instead
         at a basic-block level.
         """
 
         cycles = 0
         visited = []
 
-        # stores current basic-block that we want to analyze
-        callstack = [target]
+        # get the root basic block of the target
+        bb_root = list(target.basic_blocks)[0]
+
+        """
+        # like callgraph, store stack for depth-first-search
+        callstack = [bb_root]
         while callstack:
 
-            # get next block under test, and iterate over children. any blocks that
-            # loops back to a visited basic block as a back edge indicates a natural loop
+            # get next block
             bb = callstack.pop()
 
-            # use MLIL for a much more accurate basic-block grouping of instructions
-            for child in bb.mlil_basic_blocks:
+            # start iterating over outer leftmost edges
+            for child in bb.outgoing_edges:
+                print(type(child.target))
                 if child not in visited:
-                    callstack += [child]
+                    callstack += [child.target]
                 else:
                     cycles += 1
-
+            
             visited += [bb]
+        """
 
         return cycles
 
