@@ -48,15 +48,15 @@ class FuzzableAnalysis:
 
         # natural loop / iteration detected is often good behavior for a fuzzer to test, such as walking/scanning over
         # input data (aka might be a good place to find off-by-ones). Does not account for any type of basic-block obfuscation.
-        self.cycles = FuzzableAnalysis.get_cycle_complexity(target)
+        self.has_loop = FuzzableAnalysis.contains_loop(target)
 
     def markdown_row(self):
         """ Output as a Markdown row when displaying back to user """
-        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.recursive} |\n"
+        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.has_loop} | {self.recursive} | \n"
 
     def csv_row(self):
         """ Generate a CSV row for exporting to file """
-        return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.cycles}, {self.fuzzability}\n"
+        return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.has_loop}, {self.fuzzability}\n"
 
     @staticmethod
     def get_callgraph_complexity(target) -> (int, bool):
@@ -96,38 +96,20 @@ class FuzzableAnalysis:
         return (depth, recursive)
 
     @staticmethod
-    def get_cycle_complexity(target):
+    def contains_loop(target) -> int:
         """
-        Helper that does iterative loop detection by doing same depth-first search, but instead
-        at a basic-block level.
-        """
-
-        cycles = 0
-        visited = []
-
-        # get the root basic block of the target
-        bb_root = list(target.basic_blocks)[0]
-
-        """
-        # like callgraph, store stack for depth-first-search
-        callstack = [bb_root]
-        while callstack:
-
-            # get next block
-            bb = callstack.pop()
-
-            # start iterating over outer leftmost edges
-            for child in bb.outgoing_edges:
-                print(type(child.target))
-                if child not in visited:
-                    callstack += [child.target]
-                else:
-                    cycles += 1
-            
-            visited += [bb]
+        Detection of loops is at a basic block level by checking the dominance frontier,
+        which denotes the next successor the current block node will definitely reach. If the
+        same basic block exists in the dominance frontier set, then that means the block will
+        loop back to itself at some point in execution.
         """
 
-        return cycles
+        # iterate over each basic block and see if it eventually loops back to self
+        for bb in target.basic_blocks:
+            if bb in bb.dominance_frontier:
+                return True
+
+        return False
 
     @property
     def fuzzability(self) -> float:
@@ -154,15 +136,10 @@ class FuzzableAnalysis:
         if self.depth >= depth_threshold:
             score += 1
 
-        # function demonstrated high level of cyclic complexity, optimal for fuzzing
-        cycles_threshold = int(Settings().get_string("fuzzable.cycle_threshold"))
-        if self.cycles >= cycles_threshold:
+        # contains loop doesn't change score, but useful information
+        loop_increase = Settings().get_bool("fuzzable.loop_increase_score")
+        if loop_increase and self.has_loop:
             score += 1
 
-        """
-        # auxiliary: recursive call to self increases score not as much
-        if self.recursive:
-            score += 0.5
-        """
-
+        # auxiliary: recursive call doesn't change score, but useful information
         return score

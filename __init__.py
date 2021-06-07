@@ -31,13 +31,13 @@ Settings().register_setting(
 )
 
 Settings().register_setting(
-    "fuzzable.cycle_threshold",
+    "fuzzable.loop_increase_score",
     """
     {
-        "title"         : "Callgraph recursive cycle threshold",
-        "description"   : "Minimum number of recursive cycles in a given function call graph to be considered optimal for fuzzing.",
-        "type"          : "string",
-        "default"       : "10"
+        "title"         : "Score natural loop presence",
+        "description"   : "Turn on to ensure the presence of loops in a function will also increase the score.",
+        "type"          : "boolean",
+        "default"       : false
     }
 """,
 )
@@ -68,7 +68,7 @@ class WrapperTask(BackgroundTaskThread):
         log.log_info(f"Starting target discovery against {len(funcs)} functions")
 
         # final markdown table to be presented to user, with headers created first
-        markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Recursive? |\n| :--- | :--- | :--- | :--- |\n"
+        markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
 
         # append to CSV buffer if user chooses to export after analysis
         csv_out = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
