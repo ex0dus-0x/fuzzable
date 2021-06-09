@@ -11,6 +11,8 @@ fuzz executables or libraries without manual reverse engineering, and need some 
 
 The plugin also features experimental support for harness generation, which generates a potentially viable AFL/libFuzzer haress from a template based on the target function the user chooses to fuzz.
 
+Check out the blog post detailing the plugin [here](https://codemuch.tech/2021/06/07/fuzzabble/).
+
 ## Example
 
 Here is an example of the fuzzable plugin running on Binary Ninja's `libbinaryninjacore.so` dependency,

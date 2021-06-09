@@ -34,8 +34,8 @@ Settings().register_setting(
     "fuzzable.loop_increase_score",
     """
     {
-        "title"         : "Score natural loop presence",
-        "description"   : "Turn on to ensure the presence of loops in a function will also increase the score.",
+        "title"         : "Don't score natural loop presence",
+        "description"   : "Don't include natural loop as part of the fuzzability score",
         "type"          : "boolean",
         "default"       : false
     }
@@ -98,8 +98,16 @@ class WrapperTask(BackgroundTaskThread):
                 log.log_info(f"Skipping analysis for stripped function {name}")
                 continue
 
-            # instantiate module and add to parsed list
+            # instantiate analysis of the given target
             analysis = FuzzableAnalysis(func)
+
+            # if a loop is detected in the target, and it exists as part a callgraph,
+            # set has_loop for that parent as well
+            # TODO: cleanup and encapsulate in FuzzableAnalysis
+            for prev in parsed:
+                if analysis.has_loop and analysis.name in prev.visited:
+                    prev.has_loop = True
+
             parsed += [analysis]
 
         # sort parsed by highest fuzzability score and coverage depth
@@ -129,7 +137,9 @@ def run_export_report(view):
     try:
         csv_output = view.query_metadata("csv")
     except KeyError:
-        interaction.show_message_box("Error", "Cannot export without running an analysis first.")
+        interaction.show_message_box(
+            "Error", "Cannot export without running an analysis first."
+        )
         return
 
     # write last analysis to filepath
@@ -160,9 +170,18 @@ def run_harness_generation(view, func):
     with open(template_file, "r") as fd:
         template = fd.read()
 
-    # replace templated portions of the template
+    log.log_info("Replacing elements in template")
     template = template.replace("{NAME}", func.name)
     template = template.replace("{RET_TYPE}", str(func.return_type))
+
+    harness = interaction.get_save_filename_input("Filename to write to?", "cpp")
+    harness = csv_file.decode("utf-8") + ".cpp"
+
+    log.log_info("Writing new template to workspace")
+    with open(harness, "w+") as fd:
+        fd.write(template)
+
+    interaction.show_message_box("Success", f"Done, wrote fuzzer harness to {harness}")
 
 
 PluginCommand.register(

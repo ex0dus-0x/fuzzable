@@ -4,12 +4,14 @@ analysis.py
     Implements object that interfaces fuzzability analysis and score calculation
     for a given function from a binary view.
 """
+import typing as t
 
 import binaryninja.log as log
 from binaryninja.settings import Settings
 
 # interesting patterns to parse for in unstripped symbols when determining fuzzability
 INTERESTING_PATTERNS = ["Parse", "Read", "Buf", "File", "Input", "String"]
+
 
 class FuzzableAnalysis:
     """
@@ -44,7 +46,11 @@ class FuzzableAnalysis:
 
         # a higher depth means more code coverage for the fuzzer, makes function more viable for testing
         # recursive calls to self mean higher cyclomatic complexity, also increases viability for testing
-        (self.depth, self.recursive) = FuzzableAnalysis.get_callgraph_complexity(target)
+        (
+            self.depth,
+            self.recursive,
+            self.visited,
+        ) = FuzzableAnalysis.get_callgraph_complexity(target)
 
         # natural loop / iteration detected is often good behavior for a fuzzer to test, such as walking/scanning over
         # input data (aka might be a good place to find off-by-ones). Does not account for any type of basic-block obfuscation.
@@ -59,7 +65,7 @@ class FuzzableAnalysis:
         return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.has_loop}, {self.fuzzability}\n"
 
     @staticmethod
-    def get_callgraph_complexity(target) -> (int, bool):
+    def get_callgraph_complexity(target) -> (int, bool, t.List[str]):
         """
         Calculates coverage depth by doing a depth first search on function call graph,
         return a final depth and flag denoting recursive implementation
@@ -93,10 +99,10 @@ class FuzzableAnalysis:
 
             visited += [func.name]
 
-        return (depth, recursive)
+        return (depth, recursive, visited)
 
     @staticmethod
-    def contains_loop(target) -> int:
+    def contains_loop(target) -> bool:
         """
         Detection of loops is at a basic block level by checking the dominance frontier,
         which denotes the next successor the current block node will definitely reach. If the
@@ -113,7 +119,7 @@ class FuzzableAnalysis:
 
     @property
     def fuzzability(self) -> float:
-        """ 
+        """
         Calculate a final fuzzability score once analysis is completed.
         """
 
@@ -121,25 +127,25 @@ class FuzzableAnalysis:
 
         # function is publicly exposed
         if not self.stripped:
-            score += 1
+            score += 1.0
 
             # name contains interesting patterns often useful for fuzz harnesses
             if self.interesting_name:
-                score += 1
+                score += 1.0
 
         # function signature can directly consume fuzzer input
         if self.interesting_args:
-            score += 1
+            score += 1.0
 
         # function achieved an optimal threshold of coverage to be fuzzed
         depth_threshold = int(Settings().get_string("fuzzable.depth_threshold"))
         if self.depth >= depth_threshold:
-            score += 1
+            score += 1.0
 
-        # contains loop doesn't change score, but useful information
+        # contains loop won't change score if configured
         loop_increase = Settings().get_bool("fuzzable.loop_increase_score")
-        if loop_increase and self.has_loop:
-            score += 1
+        if not loop_increase and self.has_loop:
+            score += 1.0
 
         # auxiliary: recursive call doesn't change score, but useful information
         return score
