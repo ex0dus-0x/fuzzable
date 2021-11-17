@@ -18,7 +18,7 @@ Check out the blog post detailing the plugin [here](https://codemuch.tech/2021/0
 Here is an example of the fuzzable plugin running on [cesanta/mjs](https://github.com/cesanta/mjs),
 accuracy identifying targets for fuzzing and further vulnerability assessment:
 
-![Sample](https://github.com/ex0dus-0x/fuzzable/blob/master/screen.png?raw=true "Sample")
+![Sample](https://github.com/ex0dus-0x/fuzzable/blob/main/screen.png?raw=true "Sample")
 
 ## Settings
 
