@@ -57,11 +57,11 @@ class FuzzableAnalysis:
         self.has_loop = FuzzableAnalysis.contains_loop(target)
 
     def markdown_row(self):
-        """ Output as a Markdown row when displaying back to user """
+        """Output as a Markdown row when displaying back to user"""
         return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.has_loop} | {self.recursive} | \n"
 
     def csv_row(self):
-        """ Generate a CSV row for exporting to file """
+        """Generate a CSV row for exporting to file"""
         return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.has_loop}, {self.fuzzability}\n"
 
     @staticmethod
