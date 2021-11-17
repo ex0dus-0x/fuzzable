@@ -42,7 +42,6 @@ Settings().register_setting(
 """,
 )
 
-
 Settings().register_setting(
     "fuzzable.skip_stripped",
     """
@@ -126,13 +125,13 @@ class WrapperTask(BackgroundTaskThread):
 
 
 def run_fuzzable(view):
-    """ Callback used to instantiate thread and start analysis """
+    """Callback used to instantiate thread and start analysis"""
     task = WrapperTask(view)
     task.start()
 
 
 def run_export_report(view):
-    """ Generate a report from a previous analysis, and export as CSV """
+    """Generate a report from a previous analysis, and export as CSV"""
     log.log_info("Attempting to export results to CSV")
     try:
         csv_output = view.query_metadata("csv")
@@ -154,7 +153,7 @@ def run_export_report(view):
 
 
 def run_harness_generation(view, func):
-    """ Experimental automatic fuzzer harness generation support """
+    """Experimental automatic fuzzer harness generation support"""
 
     template_file = os.path.join(binaryninja.user_plugin_path(), "fuzzable")
     if view.view_type == "ELF":
