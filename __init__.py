@@ -174,7 +174,7 @@ def run_harness_generation(view, func):
     template = template.replace("{RET_TYPE}", str(func.return_type))
 
     harness = interaction.get_save_filename_input("Filename to write to?", "cpp")
-    harness = csv_file.decode("utf-8") + ".cpp"
+    harness = harness.decode("utf-8") + ".cpp"
 
     log.log_info("Writing new template to workspace")
     with open(harness, "w+") as fd:
