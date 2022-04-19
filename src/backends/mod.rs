@@ -18,3 +18,6 @@ pub trait FuzzableAnalysis {
 
     fn generate_csv_row(&self);
 }
+
+pub use source::FuzzableSource;
+pub use binja::FuzzableBinja;

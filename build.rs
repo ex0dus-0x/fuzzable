@@ -93,6 +93,6 @@ fn tree_sitter_grammar() {
 }
 
 fn main() {
-    link_binja();
     tree_sitter_grammar();
+    link_binja();
 }

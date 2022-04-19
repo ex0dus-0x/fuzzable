@@ -2,7 +2,7 @@ mod backends;
 mod errors;
 
 use crate::errors::{FuzzResult, FuzzError};
-use crate::backends::source::FuzzableSource;
+use crate::backends::{FuzzableSource, FuzzableBinja};
 
 use clap::{Arg, ArgMatches, Command};
 use walkdir::WalkDir;
@@ -60,6 +60,7 @@ fn run(args: ArgMatches) -> FuzzResult<()> {
         match Object::parse(&buffer)? {
             Object::Elf(_) | Object::PE(_) | Object::Mach(_) => {
                 log::debug!("{:?} is a binary, continuing", path);
+                let run = FuzzableBinja::new(path.to_path_buf());
             },
             _ => {
                 log::trace!("Not a binary, checking if source");

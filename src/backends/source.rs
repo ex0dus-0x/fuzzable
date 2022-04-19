@@ -5,7 +5,10 @@ use crate::errors::{FuzzResult, FuzzError};
 use std::fs;
 use std::path::PathBuf;
 
-extern "C" { fn tree_sitter_c() -> Language; }
+extern "C" {
+    fn tree_sitter_c() -> Language;
+    fn tree_sitter_cpp() -> Language;
+}
 
 pub struct FuzzableSource {
 }
