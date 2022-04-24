@@ -1,6 +1,6 @@
-use tree_sitter::{Parser, Language};
+use tree_sitter::{Language, Parser};
 
-use crate::errors::{FuzzResult, FuzzError};
+use crate::errors::{FuzzError, FuzzResult};
 
 use std::fs;
 use std::path::PathBuf;
@@ -10,8 +10,7 @@ extern "C" {
     fn tree_sitter_cpp() -> Language;
 }
 
-pub struct FuzzableSource {
-}
+pub struct FuzzableSource {}
 
 impl FuzzableSource {
     pub fn new(paths: Vec<PathBuf>) -> FuzzResult<()> {

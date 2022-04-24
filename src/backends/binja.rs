@@ -1,31 +1,46 @@
 use binaryninja::{
-    command,
     binaryview::{BinaryView, BinaryViewExt},
+    command,
     function::Function,
 };
 
 use std::fs::File;
 use std::path::PathBuf;
+use std::collections::BTreeMap;
 
-pub struct FuzzableBinja;
+use crate::errors::FuzzResult;
+use crate::backends::Candidate;
+
+pub struct FuzzableBinja {
+    candidates: BTreeMap<String, Candidate>,
+    ranked: Vec<Candidate>,
+}
 
 impl FuzzableBinja {
-    pub fn new(path: PathBuf) {
+    pub fn new(path: PathBuf) -> FuzzResult<()> {
         binaryninja::headless::init();
         let bv = binaryninja::open_view(path).expect("Couldn't open file");
+        bv.update_analysis_and_wait();
         run_fuzzable(&bv);
         binaryninja::headless::shutdown();
+        Ok(())
     }
 }
 
 fn run_fuzzable(bv: &BinaryView) {
     for func in &bv.functions() {
         log::trace!("{}", func.symbol().full_name());
+        log::trace!("{}", (*func.handle).callers);
     }
 }
 
 fn run_export_report(bv: &BinaryView) {
-    let csv_file = binaryninja::interaction::get_save_filename_input("Filename to export as CSV?", "csv", "Save CSV").unwrap();
+    let csv_file = binaryninja::interaction::get_save_filename_input(
+        "Filename to export as CSV?",
+        "csv",
+        "Save CSV",
+    )
+    .unwrap();
     let mut file = File::create(csv_file);
 }
 

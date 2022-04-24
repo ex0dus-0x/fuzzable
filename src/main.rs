@@ -1,12 +1,12 @@
 mod backends;
 mod errors;
 
-use crate::errors::{FuzzResult, FuzzError};
-use crate::backends::{FuzzableSource, FuzzableBinja};
+use crate::backends::{FuzzableBinja, FuzzableSource};
+use crate::errors::{FuzzError, FuzzResult};
 
 use clap::{Arg, ArgMatches, Command};
-use walkdir::WalkDir;
 use goblin::Object;
+use walkdir::WalkDir;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -61,19 +61,21 @@ fn run(args: ArgMatches) -> FuzzResult<()> {
             Object::Elf(_) | Object::PE(_) | Object::Mach(_) => {
                 log::debug!("{:?} is a binary, continuing", path);
                 let run = FuzzableBinja::new(path.to_path_buf());
-            },
+            }
             _ => {
                 log::trace!("Not a binary, checking if source");
                 if let Some(ext) = path.extension() {
                     if ext == "c" || ext == "cpp" {
-                        
+                        log::debug!("{:?} is a source path, continuing analysis", path);
+                        let sources: Vec<PathBuf> = vec![path.to_path_buf()];
+                        let run = FuzzableSource::new(sources)?;
                     }
                 }
-
-            },
+            }
         }
-        return Err(FuzzError::new(&String::from("target file is not a binary or C/C++ source code")));
-
+        return Err(FuzzError::new(&String::from(
+            "target file is not a binary or C/C++ source code",
+        )));
     } else if metadata.is_dir() {
         let mut source_targets: Vec<PathBuf> = vec![];
 
@@ -89,7 +91,9 @@ fn run(args: ArgMatches) -> FuzzResult<()> {
 
         log::debug!("Source paths: {:?}", source_targets);
         if source_targets.len() == 0 {
-            return Err(FuzzError::new(&String::from("directory specified, but no C/C++ source code found in it")));
+            return Err(FuzzError::new(&String::from(
+                "directory specified, but no C/C++ source code found in it",
+            )));
         }
 
         let run = FuzzableSource::new(source_targets)?;

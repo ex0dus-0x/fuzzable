@@ -19,5 +19,10 @@ pub trait FuzzableAnalysis {
     fn generate_csv_row(&self);
 }
 
-pub use source::FuzzableSource;
+pub struct Candidate {
+    name: String,
+    stripped: bool,
+}
+
 pub use binja::FuzzableBinja;
+pub use source::FuzzableSource;
