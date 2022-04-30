@@ -76,7 +76,6 @@ fn tree_sitter_grammar() {
         .flag("-w")
         .compile("tree-sitter-c");
 
-    /*
     cc::Build::new()
         .cpp(true)
         .include("third_party/grammars/")
@@ -89,7 +88,6 @@ fn tree_sitter_grammar() {
         .file("third_party/grammars/weggli-cpp/src/parser.c")
         .flag("-w")
         .compile("tree-sitter-cpp-parser");
-    */
 }
 
 fn main() {

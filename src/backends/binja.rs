@@ -30,7 +30,7 @@ impl FuzzableBinja {
 fn run_fuzzable(bv: &BinaryView) {
     for func in &bv.functions() {
         log::trace!("{}", func.symbol().full_name());
-        log::trace!("{}", (*func.handle).callers);
+        //log::trace!("{}", (*func.handle).callers);
     }
 }
 

@@ -1,15 +1,15 @@
 mod backends;
 mod errors;
 
-use crate::backends::{FuzzableBinja, FuzzableSource};
-use crate::errors::{FuzzError, FuzzResult};
-
 use clap::{Arg, ArgMatches, Command};
 use goblin::Object;
 use walkdir::WalkDir;
 
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use fuzzable::backends::{FuzzableBinja, FuzzableSource};
+use fuzzable::errors::{FuzzError, FuzzResult};
 
 fn main() {
     pretty_env_logger::init();
@@ -68,14 +68,17 @@ fn run(args: ArgMatches) -> FuzzResult<()> {
                     if ext == "c" || ext == "cpp" {
                         log::debug!("{:?} is a source path, continuing analysis", path);
                         let sources: Vec<PathBuf> = vec![path.to_path_buf()];
-                        let run = FuzzableSource::new(sources)?;
+                        let run = FuzzableSource::excavate(sources)?;
                     }
+                } else {
+                    return Err(FuzzError::new(&String::from(
+                        "target file is not a binary or C/C++ source code",
+                    )));
                 }
             }
         }
-        return Err(FuzzError::new(&String::from(
-            "target file is not a binary or C/C++ source code",
-        )));
+    
+    // directories are only valid for source code
     } else if metadata.is_dir() {
         let mut source_targets: Vec<PathBuf> = vec![];
 
@@ -96,7 +99,7 @@ fn run(args: ArgMatches) -> FuzzResult<()> {
             )));
         }
 
-        let run = FuzzableSource::new(source_targets)?;
+        let run = FuzzableSource::excavate(source_targets)?;
     }
     Ok(())
 }
