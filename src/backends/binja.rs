@@ -4,12 +4,12 @@ use binaryninja::{
     function::Function,
 };
 
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
-use std::collections::BTreeMap;
 
-use crate::errors::FuzzResult;
 use crate::backends::Candidate;
+use crate::errors::FuzzResult;
 
 pub struct FuzzableBinja {
     candidates: BTreeMap<String, Candidate>,
@@ -17,7 +17,7 @@ pub struct FuzzableBinja {
 }
 
 impl FuzzableBinja {
-    pub fn new(path: PathBuf) -> FuzzResult<()> {
+    pub fn excavate(path: PathBuf) -> FuzzResult<()> {
         binaryninja::headless::init();
         let bv = binaryninja::open_view(path).expect("Couldn't open file");
         bv.update_analysis_and_wait();

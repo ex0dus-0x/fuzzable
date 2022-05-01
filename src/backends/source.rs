@@ -1,11 +1,11 @@
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
-use std::collections::BTreeMap;
 
-use crate::errors::{FuzzError, FuzzResult};
 use crate::backends::Candidate;
+use crate::errors::{FuzzError, FuzzResult};
 
 extern "C" {
     fn tree_sitter_c() -> Language;
@@ -26,15 +26,15 @@ impl FuzzableSource {
 
         let query = Query::new(
             language,
-    		r#"
-    		((call_expression
-      		  function: (_) @fn-name
-      		  arguments: (arguments (string_literal))) @raise
+            r#"
+    		((function_definition
+      		  declarator: (_) @fn-name)
      		(#match? @fn-name "(std::|)env::(var|remove_var)"))
-    		"#
-        ).unwrap();
+    		"#,
+        )
+        .unwrap();
 
-		let mut query_cursor = QueryCursor::new();
+        let mut query_cursor = QueryCursor::new();
 
         for path in paths {
             log::trace!("Parsing the `{}` as an AST", path.display());
@@ -48,6 +48,14 @@ impl FuzzableSource {
 
             let root_node = tree.root_node();
             log::debug!("{}", root_node.to_sexp());
+
+            /*
+            let all_matches = query_cursor.matches(
+                &query,
+                root_node,
+                &source_code,
+            );
+            */
         }
         Ok(())
     }

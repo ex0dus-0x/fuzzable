@@ -60,7 +60,7 @@ fn run(args: ArgMatches) -> FuzzResult<()> {
         match Object::parse(&buffer)? {
             Object::Elf(_) | Object::PE(_) | Object::Mach(_) => {
                 log::debug!("{:?} is a binary, continuing", path);
-                let run = FuzzableBinja::new(path.to_path_buf());
+                let run = FuzzableBinja::excavate(path.to_path_buf());
             }
             _ => {
                 log::trace!("Not a binary, checking if source");
@@ -77,7 +77,7 @@ fn run(args: ArgMatches) -> FuzzResult<()> {
                 }
             }
         }
-    
+
     // directories are only valid for source code
     } else if metadata.is_dir() {
         let mut source_targets: Vec<PathBuf> = vec![];
