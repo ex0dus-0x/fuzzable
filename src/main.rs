@@ -93,7 +93,7 @@ fn run(args: ArgMatches) -> FuzzResult<()> {
         }
 
         log::debug!("Source paths: {:?}", source_targets);
-        if source_targets.len() == 0 {
+        if source_targets.is_empty() {
             return Err(FuzzError::new(&String::from(
                 "directory specified, but no C/C++ source code found in it",
             )));

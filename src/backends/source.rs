@@ -1,4 +1,4 @@
-use tree_sitter::{Language, Parser, Query, QueryCursor};
+use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -27,9 +27,9 @@ impl FuzzableSource {
         let query = Query::new(
             language,
             r#"
-    		((function_definition
-      		  declarator: (_) @fn-name)
-     		(#match? @fn-name "(std::|)env::(var|remove_var)"))
+    		(
+                (function_definition)
+            )
     		"#,
         )
         .unwrap();
@@ -38,8 +38,9 @@ impl FuzzableSource {
 
         for path in paths {
             log::trace!("Parsing the `{}` as an AST", path.display());
-            let source_code = fs::read_to_string(path)?;
-            let tree = match parser.parse(source_code, None) {
+            let source_code = fs::read(&path)?;
+            let text_callback = |n: Node| &source_code[n.byte_range()];
+            let tree = match parser.parse(&source_code, None) {
                 Some(res) => res,
                 None => {
                     return Err(FuzzError(String::from("cannot parse source")));
@@ -49,13 +50,15 @@ impl FuzzableSource {
             let root_node = tree.root_node();
             log::debug!("{}", root_node.to_sexp());
 
-            /*
-            let all_matches = query_cursor.matches(
-                &query,
-                root_node,
-                &source_code,
-            );
-            */
+            let all_matches = query_cursor.matches(&query, root_node, source_code.as_slice());
+
+            for m in all_matches {
+                println!("{:?}", m);
+                for capture in m.captures {
+                    let node = capture.node;
+                    println!("{}", node.to_sexp());
+                }
+            }
         }
         Ok(())
     }
