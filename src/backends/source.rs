@@ -76,14 +76,30 @@ impl FuzzableSource {
                     log::trace!("Parsing top-level declarator node for function");
                     let declarator = match capture.node.child_by_field_name("declarator") {
                         Some(child) => {
+
                             // recovers the actual name
                             // TODO: is there a better way to do this?
-                            match child.child_by_field_name("declarator") {
+                            let name = match child.child_by_field_name("declarator") {
                                 Some(val) => val,
                                 None => {
                                     continue;
                                 }
-                            }
+                            };
+
+                            let params = match child.child_by_field_name("parameters") {
+                                Some(params) => {
+                                    println!("Getting params");
+                                    let mut cursor = child.walk();
+                                    for param in params.children_by_field_name("parameter_declaration", &mut cursor) {
+                                        println!("{:?}", param);
+                                    }
+                                    params
+                                },
+                                None => {
+                                    continue;
+                                }
+                            };
+                            name
                         }
                         None => {
                             log::warn!("No declarator node for function");
