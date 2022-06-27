@@ -14,7 +14,7 @@ from binaryninja.enums import SymbolType
 from binaryninja.plugin import BackgroundTaskThread, PluginCommand
 from binaryninja.settings import Settings
 
-from .analysis import FuzzableAnalysis
+from fuzzable.analysis import FuzzableAnalysis
 
 # configurable settings to tune
 Settings().register_group("fuzzable", "Fuzzable")
