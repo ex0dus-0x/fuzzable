@@ -1,0 +1,13 @@
+[MASTER]
+
+disable=import-error,
+        todo,
+        fixme,
+        no-member,
+        too-many-instance-attributes,
+        too-many-arguments,
+        too-many-locals,
+        too-few-public-methods,
+        c-extension-no-member,
+        raise-missing-from,
+        wrong-import-position
