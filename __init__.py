@@ -14,7 +14,7 @@ from binaryninja.enums import SymbolType
 from binaryninja.plugin import BackgroundTaskThread, PluginCommand
 from binaryninja.settings import Settings
 
-from fuzzable.analysis import FuzzableAnalysis
+from fuzzable.analysis.binja import FuzzableAnalysis
 
 # configurable settings to tune
 Settings().register_group("fuzzable", "Fuzzable")
@@ -181,6 +181,7 @@ def run_harness_generation(view, func):
         fd.write(template)
 
     interaction.show_message_box("Success", f"Done, wrote fuzzer harness to {harness}")
+
 
 PluginCommand.register(
     "Fuzzable\\Analysis\\Analyze & Rank All Fuzzable Targets",

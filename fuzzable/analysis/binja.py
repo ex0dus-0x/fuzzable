@@ -1,5 +1,5 @@
 """
-analysis.py
+binja.py
 
     Implements object that interfaces fuzzability analysis and score calculation
     for a given function from a binary view.
