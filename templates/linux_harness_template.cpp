@@ -12,8 +12,8 @@
  *
  *          $ clang -DLIBFUZZER -g -fsanitize=fuzzer,address {NAME}_harness.cpp -no-pie -o {NAME}_fuzzer -ldl
  *
- *      If the target library is not dynamic instrumented, make sure to operate your
- *      fuzzer under binary-only mode, ie AFL-QEMU!!!
+ *      If the target library is not instrumented with sanitizers, make sure to operate your
+ *      fuzzer under binary-only mode, ie AFL-QEMU with QASAN!
  */
 
 #include <dlfcn.h>
@@ -66,18 +66,8 @@ int main (int argc, char** argv)
         return -1;
 
 #ifdef LIBFUZZER
-    if (Size == 0)
-        return 0;
 
-    // make sure the fuzzed data is null terminated
-    if (Data[Size-1] != '\x00'){
-        buf = (int64_t*) alloca(Size+1);
-        memset(buf, 0, Size+1);
-    } else {
-        buf = (int64_t*) alloca(Size);
-        memset(buf, 0, Size);
-    }
-    memcpy(buf, Data, Size);
+
 
 #else
     if (argc != 2)
@@ -86,14 +76,5 @@ int main (int argc, char** argv)
 
 #endif
 
-    /* ==== ACTUAL FUZZING LOGIC ==== */
-
-    {NAME}_t {NAME} =
-        ({NAME}_t) dlsym(handle, "{NAME}");
-
-    {RET_TYPE} res = {NAME}(/* TODO: fill in arguments here */);
-
-    /* TODO: handle return value logic */
-   
     return 0;
 }

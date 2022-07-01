@@ -182,21 +182,38 @@ def run_harness_generation(view, func):
 
     interaction.show_message_box("Success", f"Done, wrote fuzzer harness to {harness}")
 
-
 PluginCommand.register(
-    "Fuzzable\\Analyze fuzzable targets",
+    "Fuzzable\\Analysis\\Analyze & Rank All Fuzzable Targets",
     "Identify and generate targets for fuzzing",
     run_fuzzable,
 )
 
 PluginCommand.register(
-    "Fuzzable\\Export fuzzability report as CSV",
+    "Fuzzable\\Analysis\\Analyze & Rank High Risk",
+    "Identify and generate targets for fuzzing",
+    run_fuzzable,
+)
+
+PluginCommand.register(
+    "Fuzzable\\Export\\Fuzzability Report\\Export as CSV",
+    "Identify and generate targets for fuzzing",
+    run_export_report,
+)
+
+PluginCommand.register(
+    "Fuzzable\\Export\\Fuzzability Report\\Export as Markdown",
+    "Identify and generate targets for fuzzing",
+    run_export_report,
+)
+
+PluginCommand.register(
+    "Fuzzable\\Export\\Signatures\\Export for highlighted function",
     "Identify and generate targets for fuzzing",
     run_export_report,
 )
 
 PluginCommand.register_for_function(
-    "Fuzzable\\Generate fuzzing harness (EXPERIMENTAL, C/C++ ONLY)",
+    "Fuzzable\\Harness Generation\\Generate fuzzing harness (EXPERIMENTAL, C/C++ ONLY)",
     "For a target function, generate a AFL/libFuzzer C++ harness",
     run_harness_generation,
 )

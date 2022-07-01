@@ -10,7 +10,7 @@ import binaryninja.log as log
 from binaryninja.settings import Settings
 
 # interesting patterns to parse for in unstripped symbols when determining fuzzability
-INTERESTING_PATTERNS = ["Parse", "Read", "Buf", "File", "Input", "String"]
+INTERESTING_PATTERNS = ["Parse", "Read", "Buf", "File", "Input", "String", "Decode"]
 
 
 class FuzzableAnalysis:
