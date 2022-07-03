@@ -389,6 +389,20 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "prettytable"
+version = "3.3.0"
+description = "A simple Python library for easily displaying tabular data in a visually appealing ASCII table format"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+wcwidth = "*"
+
+[package.extras]
+tests = ["pytest", "pytest-cov", "pytest-lazy-fixture"]
+
+[[package]]
 name = "progressbar2"
 version = "4.0.0"
 description = "A Python Progressbar library to provide visual (yet text based) progress to long running operations."
@@ -618,6 +632,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "wcwidth"
+version = "0.2.5"
+description = "Measures the displayed width of unicode strings in a terminal"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "z3-solver"
 version = "4.8.17.0"
 description = "an efficient SMT solver library"
@@ -628,7 +650,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "1ecdd1d013f5e6b4133b744cdd94e75252b2e13ae939ed2031ee9e3a666d6de5"
+content-hash = "1a61bd6e923dd83290736e2a6cacf19cd322e3bfd949748482f16fbf36f6f625"
 
 [metadata.files]
 ailment = [
@@ -854,6 +876,10 @@ ply = [
     {file = "ply-3.11-py2.py3-none-any.whl", hash = "sha256:096f9b8350b65ebd2fd1346b12452efe5b9607f7482813ffca50c22722a807ce"},
     {file = "ply-3.11.tar.gz", hash = "sha256:00c7c1aaa88358b9c765b6d3000c6eec0ba42abca5351b095321aef446081da3"},
 ]
+prettytable = [
+    {file = "prettytable-3.3.0-py3-none-any.whl", hash = "sha256:d1c34d72ea2c0ffd6ce5958e71c428eb21a3d40bf3133afe319b24aeed5af407"},
+    {file = "prettytable-3.3.0.tar.gz", hash = "sha256:118eb54fd2794049b810893653b20952349df6d3bc1764e7facd8a18064fa9b0"},
+]
 progressbar2 = [
     {file = "progressbar2-4.0.0-py2.py3-none-any.whl", hash = "sha256:2562ba3e554433f08e81fb7b786208b19de135f3ca1c5da1787d9b05558e6247"},
     {file = "progressbar2-4.0.0.tar.gz", hash = "sha256:14d3165a1781d053ffaa117daf27cc706128d2ec1d2977fdb05b6bb079888013"},
@@ -999,6 +1025,10 @@ unicorn = [
     {file = "unicorn-1.0.2rc4-py2.py3-none-win32.whl", hash = "sha256:0f9abf8a0aefe7505cf15e4700c542916d5aa435dc6b12408b3ddcb06f3cb846"},
     {file = "unicorn-1.0.2rc4-py2.py3-none-win_amd64.whl", hash = "sha256:3bc85f19e4eb828e1b0b640d27f1b84ab341505fc57b4955fca8d2847a561a36"},
     {file = "unicorn-1.0.2rc4.tar.gz", hash = "sha256:ed2a4960f2760e49e61108478f019f5bf065a342fa506523c69398f2d2bd4781"},
+]
+wcwidth = [
+    {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
+    {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
 ]
 z3-solver = [
     {file = "z3-solver-4.8.17.0.tar.gz", hash = "sha256:67abd61898039d6c8c07196949d2962f461402b670a137b2347a65c3c1890f73"},
