@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-fuzzable.py
+__init__.py
 
-    Binary Ninja helper plugin for fuzzable target discovery.
+    Plugin module used for Binary Ninja
 """
 from binaryninja.plugin import PluginCommand
 from binaryninja.settings import Settings
@@ -54,7 +54,7 @@ PluginCommand.register(
 )
 
 PluginCommand.register(
-    "Fuzzable\\Analysis\\Analyze & Rank High Risk",
+    "Fuzzable\\Analysis\\Analyze & Rank High Risk Fuzzable targets",
     "Identify and generate targets for fuzzing",
     binja.run_fuzzable,
 )

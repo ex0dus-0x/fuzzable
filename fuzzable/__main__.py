@@ -8,6 +8,8 @@ import logging
 import typing as t
 import typer
 
+from fuzzable.analysis import *
+
 # Attempt to load Binary Ninja as the main disassembly backend.
 # If not available, angr will be the fallback.
 BINJA = False
@@ -20,7 +22,7 @@ except ImportError:
 
 from pathlib import Path
 
-SOURCE_FILE_EXTS = ["c", "cpp", "cc", "h", "hpp"]
+SOURCE_FILE_EXTS = [".c", ".cpp", ".cc", ".h", ".hpp"]
 
 app = typer.Typer(
     help="Framework for Automating Fuzzable Target Discovery with Static Analysis"

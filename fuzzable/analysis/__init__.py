@@ -5,5 +5,11 @@ INTERESTING_PATTERNS = ["Parse", "Read", "Buf", "File", "Input", "String", "Deco
 
 
 class AnalysisBackend(abc.ABC):
+
+    @abc.abstractmethod
     def __init__(self):
+        pass
+
+    @abc.abstractmethod
+    def run_with_conf(self):
         pass
