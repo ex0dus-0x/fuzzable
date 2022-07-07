@@ -48,31 +48,26 @@ Settings().register_setting(
 )
 
 PluginCommand.register(
-    "Fuzzable\\Analysis\\Analyze & Rank All Fuzzable Targets",
-    "Identify and generate targets for fuzzing",
-    binja.run_fuzzable,
+    "Fuzzable\\Analysis Type\\Recommend Fuzzable Functions (much faster)",
+    "List out functions we've determined to be the best candidates for fuzzing."
+    "This will exclude functions that is determined to not be directly usable for a harness.",
+    binja.run_fuzzable_recommend,
 )
 
 PluginCommand.register(
-    "Fuzzable\\Analysis\\Analyze & Rank High Risk Fuzzable targets",
-    "Identify and generate targets for fuzzing",
-    binja.run_fuzzable,
+    "Fuzzable\\Analysis Type\\Rank All Function by Fuzzability (more comprehensive)",
+    "Generate fuzzability scores for all functions and rank. This will not exclude any function.",
+    binja.run_fuzzable_rank,
 )
 
 PluginCommand.register(
-    "Fuzzable\\Export\\Fuzzability Report\\Export as CSV",
-    "Identify and generate targets for fuzzing",
-    binja.run_export_report,
-)
-
-PluginCommand.register(
-    "Fuzzable\\Export\\Fuzzability Report\\Export as Markdown",
+    "Fuzzable\\Export Fuzzability Report\\CSV (.csv)",
     "Identify and generate targets for fuzzing",
     binja.run_export_report,
 )
 
 PluginCommand.register(
-    "Fuzzable\\Export\\Signatures\\Export for highlighted function",
+    "Fuzzable\\Export Fuzzability Report\\ Markdown (.md)",
     "Identify and generate targets for fuzzing",
     binja.run_export_report,
 )

@@ -5,73 +5,93 @@ binja.py
     for a given function from a binary view.
 """
 import os
-import functools
 import typing as t
 
 import binaryninja
 import binaryninja.log as log
 import binaryninja.interaction as interaction
 
+from binaryninja import BinaryView
 from binaryninja.enums import SymbolType
 from binaryninja.settings import Settings
 from binaryninja.plugin import BackgroundTaskThread
 
-from . import INTERESTING_PATTERNS, AnalysisBackend
+from fuzzable.analysis import AnalysisBackend, AnalysisMode
+from fuzzable.metrics import CallScore, CoverageReport
 
 
-class FuzzableAnalysis(AnalysisBackend, BackgroundTaskThread):
-    def __init__(self, view):
-        super(FuzzableAnalysis, self).__init__(
+class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
+    """Derived class to support Binary Ninja, and can be dispatched as a task from the plugin."""
+
+    def __init__(self, target):
+        super(BinjaAnalysis, self).__init__(
             "Finding fuzzable targets in current binary view"
         )
-        self.view = view
+        self.view: BinaryView = target
 
-    def run(self):
+    def run(self) -> None:
         funcs = self.view.functions
-        log.log_info(f"Starting target discovery against {len(funcs)} functions")
 
-        # final markdown table to be presented to user, with headers created first
-        markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
-
-        # append to CSV buffer if user chooses to export after analysis
-        csv_out = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
-
-        # stores all parsed analysis objects
-        parsed = []
-
-        # iterate over each symbol
-        log.log_info(f"Iterating over symbols in binary")
+        analyzed = []
+        log.log_info(f"Starting fuzzable analysis over {len(funcs)} symbols in binary")
         for func in funcs:
+            name = func.name
 
             log.log_trace("Checking to see if we should ignore")
-            if FuzzableAnalysis.ignore(func):
+            if BinjaAnalysis.ignore(func):
                 continue
 
-            log.log_trace(f"Statically analyzing the call {func.name}")
-            analysis = self._analyze_call(func)
+            log.log_info(f"Starting analysis for function {name}")
+            score = self.analyze_call(name, func)
 
             # if a loop is detected in the target, and it exists as part a callgraph,
             # set has_loop for that parent as well
-            for prev in parsed:
-                if analysis.has_loop and analysis.name in prev.visited:
+            for prev in analyzed:
+                if score.has_loop and score.name in prev.visited:
                     prev.has_loop = True
 
-            parsed += [analysis]
+            analyzed += [score]
+
+        # filter out only those that are top-level. We don't need to rank here
+        if self.mode == AnalysisMode.RECOMMEND:
+            analyzed = list(filter(lambda x: x.toplevel, analyzed))
 
         # sort parsed by highest fuzzability score and coverage depth
-        parsed = sorted(parsed, key=lambda x: (x.fuzzability, x.depth), reverse=True)
+        elif self.mode == AnalysisMode.RANK:
+            ranked = sorted(analyzed, key=lambda x: (x.fuzzability, x.depth), reverse=True)
 
-        # add ranked results as rows to final markdown table and CSV if user chooses to export
-        for analysis in parsed:
-            markdown_result += analysis.markdown_row()
-            csv_out += analysis.csv_row()
+            # TODO: fix
+            csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
+            markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
+            for score in ranked:
+                markdown_result += score.table_row
+                csv_result += score.csv_row
 
         log.log_info("Saving to memory and displaying finalized results...")
-        self.view.store_metadata("csv", csv_out)
+        self.view.store_metadata("csv", csv_result)
         self.view.show_markdown_report("Fuzzable targets", markdown_result)
 
+    def analyze_call(self, name: str, func: t.Any) -> CallScore:
+        stripped = "sub_" in name
+
+        # no need to check if no name available
+        # TODO: maybe we should run this if a signature was recovered
+        fuzz_friendly = False
+        if not stripped:
+            fuzz_friendly = BinjaAnalysis.is_fuzz_friendly(name)
+
+        return CallScore(
+            name=name,
+            toplevel=BinjaAnalysis.is_toplevel_call(func),
+            fuzz_friendly=fuzz_friendly,
+            has_risky_sink=BinjaAnalysis.has_risky_sink(func),
+            contains_loop = BinjaAnalysis.contains_loop(func),
+            coverage_depth=BinjaAnalysis.get_coverage_depth(func),
+            stripped=stripped,
+        )
+
     @staticmethod
-    def ignore(func) -> bool:
+    def skip_analysis(func) -> bool:
         name = func.name
         symbol = func.symbol.type
         log.log_debug(f"{name} - {symbol}")
@@ -80,64 +100,34 @@ class FuzzableAnalysis(AnalysisBackend, BackgroundTaskThread):
         if (symbol is SymbolType.ImportedFunctionSymbol) or (
             symbol is SymbolType.LibraryFunctionSymbol
         ):
+            log.log_debug(f"{name} is an import, skipping")
             return True
 
         # ignore targets with patterns that denote some type of profiling instrumentation, ie stack canary
         if name.startswith("_"):
+            log.log_debug(f"{name} is instrumentation, skipping")
             return True
 
         # if set, ignore all stripped functions for faster analysis
         if ("sub_" in name) and Settings().get_bool("fuzzable.skip_stripped"):
-            log.log_info(f"Skipping analysis for stripped function {name}")
+            log.log_debug(f"{name} is stripped, skipping")
             return True
 
         return False
 
-    def _analyze_call(self, target):
-        """
-        
-        """
-
-        fuzzability = {
-            
-        }
-
-        # parse basic function identifying info
-        self.name = target.name
-        log.log_info(f"Starting analysis for function {self.name}")
-
-        # analyze function name properties
-        self.stripped = "sub_" in self.name
-        self.interesting_name = False
-        if not self.stripped:
-            self.interesting_name = any(
-                [
-                    pattern in self.name or pattern.lower() in self.name
-                    for pattern in INTERESTING_PATTERNS
-                ]
-            )
-
-        # analyze function arguments for fuzzable patterns
-        self.args = target.parameter_vars
-        self.interesting_args = False
-        for arg in self.args:
-            if arg.type == "char*":
-                self.interesting_args = True
-                break
-
-        # a higher depth means more code coverage for the fuzzer, makes function more viable for testing
-        # recursive calls to self mean higher cyclomatic complexity, also increases viability for testing
-        (
-            self.depth,
-            self.recursive,
-            self.visited,
-        ) = FuzzableAnalysis.get_callgraph_complexity(target)
+    @staticmethod
+    def is_toplevel_call(target: t.Any) -> bool:
+        return len(target.callers) == 0
 
     @staticmethod
-    def get_callgraph_complexity(target) -> (int, bool, t.List[str]):
+    def has_risky_sink(self, func) -> bool:
+        return False
+
+    @staticmethod
+    def get_coverage_depth(target) -> CoverageReport:
         """
         Calculates coverage depth by doing a depth first search on function call graph,
-        return a final depth and flag denoting recursive implementation
+        and return a final depth and flag denoting recursive implementation
         """
 
         depth = 0
@@ -172,59 +162,16 @@ class FuzzableAnalysis(AnalysisBackend, BackgroundTaskThread):
 
     @staticmethod
     def contains_loop(target) -> bool:
-        """
-        Detection of loops is at a basic block level by checking the dominance frontier,
-        which denotes the next successor the current block node will definitely reach. If the
-        same basic block exists in the dominance frontier set, then that means the block will
-        loop back to itself at some point in execution.
-        """
-
-        # iterate over each basic block and see if it eventually loops back to self
-        for bb in target.basic_blocks:
-            if bb in bb.dominance_frontier:
-                return True
-
-        return False
-
-    @functools.cached_property
-    def fuzzability(self) -> float:
-        """
-        Calculate a final fuzzability score once analysis is completed.
-        """
-
-        score = 0.0
-
-        # function is publicly exposed
-        if not self.stripped:
-            score += 1.0
-
-            # name contains interesting patterns often useful for fuzz harnesses
-            if self.interesting_name:
-                score += 1.0
-
-        # function signature can directly consume fuzzer input
-        if self.interesting_args:
-            score += 1.0
-
-        # function achieved an optimal threshold of coverage to be fuzzed
-        depth_threshold = int(Settings().get_string("fuzzable.depth_threshold"))
-        if self.depth >= depth_threshold:
-            score += 1.0
-
-        # contains loop won't change score if configured
-        loop_increase = Settings().get_bool("fuzzable.loop_increase_score")
-        if not loop_increase and self.has_loop:
-            score += 1.0
-
-        # auxiliary: recursive call doesn't change score, but useful information
-        return score
+        return any([bb in bb.dominance_frontier for bb in target.basic_blocks])
 
 
-def run_fuzzable(view):
-    """Callback used to instantiate thread and start analysis"""
-    task = FuzzableAnalysis(view)
+def run_fuzzable_recommend(view):
+    task = BinjaAnalysis(view, AnalysisMode.RECOMMEND)
     task.start()
 
+def run_fuzzable_rank(view):
+    task = BinjaAnalysis(view, AnalysisMode.RANK)
+    task.start()  
 
 def run_export_report(view):
     """Generate a report from a previous analysis, and export as CSV"""

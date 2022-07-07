@@ -32,7 +32,8 @@ app = typer.Typer(
 @app.command()
 def main(
     target: Path,
-    lastname: str = typer.Option("", help="Last name of person to greet."),
+    recommend: bool = typer.Option("", help=""),
+    rank: bool = typer.Option("", help="If set, rank"),
 ):
     if target.is_file():
         run_on_file(target)
@@ -45,6 +46,7 @@ def main(
             bg=typer.colors.RED,
         )
         typer.echo(exception)
+
 
 def run_on_file(target: Path) -> None:
     """
