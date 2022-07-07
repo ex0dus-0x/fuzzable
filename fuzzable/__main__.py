@@ -30,35 +30,62 @@ app = typer.Typer(
 
 
 @app.command()
-def main(target: Path):
+def main(
+    target: Path,
+    lastname: str = typer.Option("", help="Last name of person to greet."),
+):
     if target.is_file():
         run_on_file(target)
     elif target.is_dir():
         run_on_workspace(target)
     else:
-        typer.echo("Target path does not exist.")
+        exception = typer.style(
+            "Target path does not exist",
+            fg=typer.colors.WHITE,
+            bg=typer.colors.RED,
+        )
+        typer.echo(exception)
 
-
-def run_on_file(target: Path):
+def run_on_file(target: Path) -> None:
+    """
+    Runs analysis on source or binary file. Helps determine the disassembly backend.
+    """
     if target.suffix in SOURCE_FILE_EXTS:
+
         return
 
     try:
         if BINJA:
-            binary = binaryninja.open(target)
+            _ = binaryninja.open(target)
         else:
-            binary = angr.Project(target)
+            _ = angr.Project(target)
     except Exception:
-        exception = typer.style("bad", fg=typer.colors.WHITE, bg=typer.colors.RED)
+        exception = typer.style(
+            "Unsupported file type. Must be either a binary or a C/C++ source",
+            fg=typer.colors.WHITE,
+            bg=typer.colors.RED,
+        )
         typer.echo(exception)
 
 
-def run_on_workspace(target: Path):
-    """ """
+def run_on_workspace(target: Path) -> None:
+    """
+    Given a workspace, recursively iterate and parse out all of the source code files
+    that are present. This is not currently supported on workspaces of binaries/libraries.
+    """
     source_files = []
     for file in target.iterdir():
         if file.suffix in SOURCE_FILE_EXTS:
             source_files += [file]
 
     if len(source_files) == 0:
-        typer.echo("")
+        exception = typer.style(
+            "No C/C++ source code found in the workspace. fuzzable currently does not support parsing on workspaces with multiple binaries.",
+            fg=typer.colors.WHITE,
+            bg=typer.colors.RED,
+        )
+        typer.echo(exception)
+        return
+
+    for path in source_files:
+        print(target / path)
