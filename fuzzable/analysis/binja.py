@@ -1,8 +1,10 @@
 """
 binja.py
 
-    Implements object that interfaces fuzzability analysis and score calculation
-    for a given function from a binary view.
+    Fuzzable analysis support for the Binary Ninja disassembler.
+    Can be invoked both through registered plugin handlers, and through
+    a headless standalone CLI.
+
 """
 import os
 import typing as t
@@ -29,6 +31,9 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
         )
         self.view: BinaryView = target
 
+    def __str__(self) -> str:
+        return "Binary Ninja"
+
     def run(self) -> None:
         funcs = self.view.functions
 
@@ -41,6 +46,13 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
             if BinjaAnalysis.ignore(func):
                 continue
 
+            # if recommend, filter and run only those that are top-level
+            if (
+                self.mode == AnalysisMode.RECOMMEND
+                and not BinjaAnalysis.is_toplevel_call(func)
+            ):
+                continue
+
             log.log_info(f"Starting analysis for function {name}")
             score = self.analyze_call(name, func)
 
@@ -50,22 +62,19 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
                 if score.has_loop and score.name in prev.visited:
                     prev.has_loop = True
 
+            # TODO: more filtering with RECOMMEND
             analyzed += [score]
 
-        # filter out only those that are top-level. We don't need to rank here
-        if self.mode == AnalysisMode.RECOMMEND:
-            analyzed = list(filter(lambda x: x.toplevel, analyzed))
+        # sort parsed by highest fuzzability score
+        log.log_info("Done, ranking the analyzed calls for reporting")
+        ranked = sorted(analyzed, key=lambda x: (x.fuzzability, x.depth), reverse=True)
 
-        # sort parsed by highest fuzzability score and coverage depth
-        elif self.mode == AnalysisMode.RANK:
-            ranked = sorted(analyzed, key=lambda x: (x.fuzzability, x.depth), reverse=True)
-
-            # TODO: fix
-            csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
-            markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
-            for score in ranked:
-                markdown_result += score.table_row
-                csv_result += score.csv_row
+        # TODO: fix
+        csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
+        markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
+        for score in ranked:
+            markdown_result += score.table_row
+            csv_result += score.csv_row
 
         log.log_info("Saving to memory and displaying finalized results...")
         self.view.store_metadata("csv", csv_result)
@@ -85,7 +94,7 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
             toplevel=BinjaAnalysis.is_toplevel_call(func),
             fuzz_friendly=fuzz_friendly,
             has_risky_sink=BinjaAnalysis.has_risky_sink(func),
-            contains_loop = BinjaAnalysis.contains_loop(func),
+            contains_loop=BinjaAnalysis.contains_loop(func),
             coverage_depth=BinjaAnalysis.get_coverage_depth(func),
             stripped=stripped,
         )
@@ -121,7 +130,9 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
 
     @staticmethod
     def has_risky_sink(self, func) -> bool:
-        return False
+        args = func.parameter_vars
+        for arg in args:
+            print(arg)
 
     @staticmethod
     def get_coverage_depth(target) -> CoverageReport:
@@ -169,9 +180,11 @@ def run_fuzzable_recommend(view):
     task = BinjaAnalysis(view, AnalysisMode.RECOMMEND)
     task.start()
 
+
 def run_fuzzable_rank(view):
     task = BinjaAnalysis(view, AnalysisMode.RANK)
-    task.start()  
+    task.start()
+
 
 def run_export_report(view):
     """Generate a report from a previous analysis, and export as CSV"""
@@ -200,7 +213,7 @@ def run_harness_generation(view, func):
 
     template_file = os.path.join(binaryninja.user_plugin_path(), "fuzzable")
     if view.view_type == "ELF":
-        template_file += "/templates/linux.cpp"
+        template_file += "/templates/linux_harness_template.cpp"
     else:
         interaction.show_message_box(
             "Error",
@@ -212,14 +225,16 @@ def run_harness_generation(view, func):
     with open(template_file, "r") as fd:
         template = fd.read()
 
-    log.log_info("Replacing elements in template")
-    template = template.replace("{NAME}", func.name)
-    template = template.replace("{RET_TYPE}", str(func.return_type))
-
+    log.log_debug("Generating harness from template")
+    template = template.format(
+        function_name=func.name,
+        return_type=str(func.return_type),
+        parameters=func.parameter_vars,
+    )
     harness = interaction.get_save_filename_input("Filename to write to?", "cpp")
     harness = harness.decode("utf-8") + ".cpp"
 
-    log.log_info("Writing new template to workspace")
+    log.log_debug(f"Writing harness `{harness}` to workspace")
     with open(harness, "w+") as fd:
         fd.write(template)
 

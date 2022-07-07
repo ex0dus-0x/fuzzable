@@ -4,16 +4,18 @@
  *      Automatically generated fuzzer harness for `{NAME}` target function. Make sure to add in implementation
  *      for any other necessary functionality to make this work.
  *
- *      To build for AFL, optimal for file-based fuzzing:
+ *      To build for AFL-QEMU, optimal for black-box, file-based fuzzing:
  *
- *          $ clang {NAME}_harness.cpp -no-pie -o {NAME}_fuzzer -ldl
+ *          $ afl-clang {NAME}_harness.cpp -no-pie -o {NAME}_fuzzer -ldl
+ * 
+ *          # check out more binary fuzzing strategies at https://aflplus.plus/docs/binaryonly_fuzzing/
+ *          $ afl-fuzz -Q -m none -i <SEEDS> -o out/ -- ./{NAME}_fuzzer
  *
  *      To build for libFuzzer, optimal for generative buffer fuzzing:
  *
  *          $ clang -DLIBFUZZER -g -fsanitize=fuzzer,address {NAME}_harness.cpp -no-pie -o {NAME}_fuzzer -ldl
+ *          $ ./{NAME}_fuzzer
  *
- *      If the target library is not instrumented with sanitizers, make sure to operate your
- *      fuzzer under binary-only mode, ie AFL-QEMU with QASAN!
  */
 
 #include <dlfcn.h>
@@ -24,7 +26,7 @@
 #include <string.h>
 
 /* alias for function pointer to the target function */
-typedef {RET_TYPE} (*{NAME}_t)({ARGS});
+typedef target_t (*{return_type})({args});
 
 /* === Manually add any other aliases here, such as pointers responsible for freeing up resources === */
 
@@ -43,9 +45,9 @@ extern "C"
 #endif
 int LoadLibrary(void)
 {
-    handle = dlopen("{TARGET}", RTLD_LAZY);
+    handle = dlopen("./{binary}", RTLD_LAZY);
     atexit(CloseLibrary);
-    return core_handle != NULL;
+    return handle != NULL;
 }
 
 

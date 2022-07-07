@@ -1,12 +1,19 @@
 """
 angr.py
+
+    TODO
 """
 import typing as t
 
 from fuzzable.analysis import AnalysisBackend, AnalysisMode
 from fuzzable.metrics import CallScore, CoverageReport
 
+
 class AngrAnalysis(AnalysisBackend):
+
+    def __str__(self) -> str:
+        return "angr"
+
     def run(self) -> t.List[CallScore]:
         pass
 

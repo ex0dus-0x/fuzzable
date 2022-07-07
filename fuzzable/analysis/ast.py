@@ -1,12 +1,24 @@
 """
 ast.py
+
+    Fuzzable analysis support for C/C++ code by through query
+    on top of tree-sitter ASTs.
+
 """
+import typing as t
+
 from tree_sitter import Language, Parser
 
 from fuzzable.analysis import AnalysisBackend, AnalysisMode
 from fuzzable.metrics import CallScore, CoverageReport
 
+
 class AstAnalysis(AnalysisBackend):
+    """Derived class"""
+
+    def __str__(self) -> str:
+        return "tree-sitter"
+
     def run(self) -> t.List[CallScore]:
         pass
 

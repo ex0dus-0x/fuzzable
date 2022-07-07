@@ -22,10 +22,13 @@ RISKY_GLIBC_CALLS: t.List[str] = []
 class AnalysisException(Exception):
     """Raised when an analysis fails to succeed."""
 
+
 class AnalysisMode(enum.Enum):
     """Describes how we should analyze targets and present results."""
+
     RECOMMEND = 0
     RANK = 1
+
 
 class AnalysisBackend(abc.ABC):
     """Base class for analysis backends to implement and detect fuzzable targets."""
@@ -36,6 +39,10 @@ class AnalysisBackend(abc.ABC):
 
         # list of names to check to against
         self.cached_names: t.List[str] = []
+
+    @abc.abstractmethod
+    def __str__(self) -> str:
+        pass
 
     @abc.abstractmethod
     def run(self) -> t.List[CallScore]:
