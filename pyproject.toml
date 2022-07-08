@@ -16,10 +16,10 @@ keywords = ["security", "fuzzing", "vulnerability-research", "binary-analysis"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-tree-sitter = "^0.20.0"
 typer = {extras = ["all"], version = "^0.4.1"}
 angr = "^9.2.8"
 prettytable = "^3.3.0"
+pycparser = "^2.21"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

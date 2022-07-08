@@ -34,7 +34,7 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
     def __str__(self) -> str:
         return "Binary Ninja"
 
-    def run(self) -> None:
+    def run(self, headless: bool = False) -> None:
         funcs = self.view.functions
 
         analyzed = []
@@ -70,15 +70,17 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
         ranked = sorted(analyzed, key=lambda x: (x.fuzzability, x.depth), reverse=True)
 
         # TODO: fix
-        csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
-        markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
-        for score in ranked:
-            markdown_result += score.table_row
-            csv_result += score.csv_row
+        if not headless:
+            csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
+            markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
+            for score in ranked:
+                markdown_result += score.table_row
+                csv_result += score.csv_row
 
-        log.log_info("Saving to memory and displaying finalized results...")
-        self.view.store_metadata("csv", csv_result)
-        self.view.show_markdown_report("Fuzzable targets", markdown_result)
+            log.log_info("Saving to memory and displaying finalized results...")
+            self.view.store_metadata("csv", csv_result)
+            self.view.show_markdown_report("Fuzzable targets", markdown_result)
+            return None
 
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
         stripped = "sub_" in name

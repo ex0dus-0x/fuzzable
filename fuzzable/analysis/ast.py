@@ -7,11 +7,27 @@ ast.py
 """
 import typing as t
 
-from tree_sitter import Language, Parser
+from pycparser import c_ast, parse_file
 
 from fuzzable.analysis import AnalysisBackend, AnalysisMode
 from fuzzable.metrics import CallScore, CoverageReport
 
+class FuncCallVisitor(c_ast.NodeVisitor):
+    def __init__(self, funcname):
+        self.funcname = funcname
+
+    def visit_FuncCall(self, node):
+        if node.name.name == self.funcname:
+            print('%s called at %s' % (self.funcname, node.name.coord))
+        # Visit args in case they contain more func calls.
+        if node.args:
+            self.visit(node.args)
+
+
+def show_func_calls(filename, funcname):
+    ast = parse_file(filename, use_cpp=True)
+    v = FuncCallVisitor(funcname)
+    v.visit(ast)
 
 class AstAnalysis(AnalysisBackend):
     """Derived class"""

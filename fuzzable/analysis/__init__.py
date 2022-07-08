@@ -40,9 +40,11 @@ class AnalysisBackend(abc.ABC):
         # list of names to check to against
         self.cached_names: t.List[str] = []
 
+
     @abc.abstractmethod
     def __str__(self) -> str:
         pass
+
 
     @abc.abstractmethod
     def run(self) -> t.List[CallScore]:
@@ -53,6 +55,7 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
+
     @abc.abstractmethod
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
         """
@@ -61,6 +64,7 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
+
     @abc.abstractmethod
     def skip_analysis(self, func: t.Any) -> bool:
         """
@@ -68,6 +72,7 @@ class AnalysisBackend(abc.ABC):
         for analysis based on certain criteria for the analysis backend.
         """
         pass
+
 
     @staticmethod
     def is_fuzz_friendly(symbol_name: str) -> bool:
@@ -84,8 +89,9 @@ class AnalysisBackend(abc.ABC):
             ]
         )
 
-    @abc.abstractmethod
+
     @staticmethod
+    @abc.abstractmethod
     def is_toplevel_call(target: t.Any) -> bool:
         """
         Checks to see if the function is top-level, aka is not invoked by any other function
@@ -93,8 +99,9 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
-    @abc.abstractmethod
+
     @staticmethod
+    @abc.abstractmethod
     def has_risky_sink(func: t.Any) -> bool:
         """
         HEURISTIC
@@ -103,8 +110,9 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
-    @abc.abstractmethod
+
     @staticmethod
+    @abc.abstractmethod
     def get_coverage_depth(func: t.Any) -> CoverageReport:
         """
         HEURISTIC
@@ -113,8 +121,9 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
-    @abc.abstractmethod
+
     @staticmethod
+    @abc.abstractmethod
     def contains_loop(func: t.Any) -> bool:
         """
         HEURISTIC

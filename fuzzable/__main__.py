@@ -10,13 +10,14 @@ import typer
 
 from fuzzable.analysis import AnalysisBackend
 from fuzzable.analysis.ast import AstAnalysis
-from fuzzable.analysis.binja import BinjaAnalysis
+from fuzzable.analysis.angr import AngrAnalysis
 
 # Attempt to load Binary Ninja as the main disassembly backend.
 # If not available, angr will be the fallback.
 BINJA = False
 try:
     import binaryninja
+    from fuzzable.analysis.binja import BinjaAnalysis
 
     BINJA = True
 except ImportError:
@@ -24,6 +25,7 @@ except ImportError:
 
 from pathlib import Path
 
+# Supported source code paths
 SOURCE_FILE_EXTS = [".c", ".cpp", ".cc", ".h", ".hpp"]
 
 app = typer.Typer(
@@ -32,16 +34,15 @@ app = typer.Typer(
 
 
 @app.command()
-def generate(target: Path, symbol_name: str):
-    print(target, symbol_name)
-
-
-@app.command()
 def analyze(
     target: Path,
-    recommend: bool = typer.Option("", help=""),
-    rank: bool = typer.Option("", help="If set, rank"),
+    mode: t.Optional[str] = typer.Option("", help=""),
+    export: t.Optional[str] = typer.Option("", help=""),
 ):
+    """
+    Run fuzzable analysis on a single or workspace of C/C++ source files, or a binary.
+    """
+
     if target.is_file():
         run_on_file(target)
     elif target.is_dir():
@@ -57,7 +58,7 @@ def analyze(
 
 def run_on_file(target: Path) -> None:
     """
-    Runs analysis on source or binary file. Helps determine the disassembly backend.
+    Runs analysis on a single source or binary file. Helps determine the disassembly backend.
     """
     analyzer: t.TypeVar[AnalysisBackend]
     if target.suffix in SOURCE_FILE_EXTS:
@@ -71,8 +72,9 @@ def run_on_file(target: Path) -> None:
 
             # TODO: angr support
             else:
-                _ = angr.Project(target)
-                raise Exception("angr support is WIP at the moment.")
+                proj = angr.Project(target)
+                analyzer = AngrAnalysis(proj)
+                raise Exception("angr support is work-in-progress at the moment.")
 
         except Exception:
             exception = typer.style(
@@ -83,7 +85,7 @@ def run_on_file(target: Path) -> None:
             typer.echo(exception)
 
     typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
-    analyzer.run()
+    analyzer.run(headless=True)
 
 
 def run_on_workspace(target: Path) -> None:
@@ -107,3 +109,9 @@ def run_on_workspace(target: Path) -> None:
 
     for path in source_files:
         print(target / path)
+
+
+@app.command()
+def create_harness(target: Path, symbol_name: str, libfuzzer: bool = False):
+    """Synthesize a AFL++/libFuzzer harness for a given symbol in a target."""
+    print(target, symbol_name)
