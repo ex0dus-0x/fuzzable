@@ -2,7 +2,7 @@
 ast.py
 
     Fuzzable analysis support for C/C++ code by through query
-    on top of tree-sitter ASTs.
+    on top of pycparser ASTs.
 
 """
 import typing as t
@@ -26,7 +26,7 @@ class FuncCallVisitor(c_ast.NodeVisitor):
 
 
 def show_func_calls(filename, funcname):
-    ast = parse_file(filename, use_cpp=True)
+    ast = parse_file(filename, use_cpp=False)
     v = FuncCallVisitor(funcname)
     v.visit(ast)
 
@@ -35,10 +35,10 @@ class AstAnalysis(AnalysisBackend):
     """Derived class"""
 
     def __str__(self) -> str:
-        return "tree-sitter"
+        return "pycparser"
 
     def run(self) -> t.List[CallScore]:
-        pass
+        show_func_calls(self.target, "main")
 
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
         pass

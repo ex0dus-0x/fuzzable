@@ -140,9 +140,7 @@ class BinjaAnalysis(
 
     @staticmethod
     def has_risky_sink(func: Function) -> bool:
-        args = func.parameter_vars
-        for arg in args:
-            print(arg)
+        pass
 
     @staticmethod
     def get_coverage_depth(target: Function) -> CoverageReport:

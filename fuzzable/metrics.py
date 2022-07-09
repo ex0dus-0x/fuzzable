@@ -1,7 +1,7 @@
 """
 metrics.py
 
-    Dataclass definitions for various metrics collected during the risk analysis.
+    Dataclass definitions for various metrics collected during qthe risk analysis.
 """
 import functools
 import typing as t
@@ -49,8 +49,7 @@ class CallScore:
     @functools.cached_property
     def fuzzability(self) -> float:
         """
-        Calculate a cached fuzzability score for the given function target
-        based on the analysis metrics.
+        Calculate a cached fuzzability score for the given function target based on the analysis metrics.
         """
 
         score = 0.0

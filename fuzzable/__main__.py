@@ -31,7 +31,7 @@ def analyze(
         help="Analysis mode to run under (either `recommend` or `rank`, default is `recommend`)."
         "See docs for more details about which to select.",
     ),
-    rec_export: t.Optional[bool] = typer.Optiona(
+    rec_export: t.Optional[bool] = typer.Option(
         False,
         help="If `--mode=recommend,` automatically attempt to generate harnesses for every candidate."
     ),
@@ -71,7 +71,7 @@ def run_on_file(target: Path, mode: AnalysisMode) -> None:
     """Runs analysis on a single source code file or binary file."""
     analyzer: t.TypeVar[AnalysisBackend]
     if target.suffix in SOURCE_FILE_EXTS:
-        analyzer = AstAnalysis(target)
+        analyzer = AstAnalysis(target, mode)
     else:
 
         # prioritize loading binja as a backend, this may not
