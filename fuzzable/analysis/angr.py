@@ -1,16 +1,15 @@
 """
 angr.py
 
-    TODO
+    Fallback disassembly backend, most likely for headless analysis.
 """
 import typing as t
 
-from fuzzable.analysis import AnalysisBackend, AnalysisMode
-from fuzzable.metrics import CallScore, CoverageReport
+from . import AnalysisBackend, AnalysisMode
+from ..metrics import CallScore, CoverageReport
 
 
 class AngrAnalysis(AnalysisBackend):
-
     def __str__(self) -> str:
         return "angr"
 

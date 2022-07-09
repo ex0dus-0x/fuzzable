@@ -7,34 +7,42 @@ binja.py
 
 """
 import os
-import typing as t
 
 import binaryninja
 import binaryninja.log as log
 import binaryninja.interaction as interaction
 
 from binaryninja import BinaryView
+from binaryninja.function import Function
 from binaryninja.enums import SymbolType
 from binaryninja.settings import Settings
 from binaryninja.plugin import BackgroundTaskThread
 
-from fuzzable.analysis import AnalysisBackend, AnalysisMode
-from fuzzable.metrics import CallScore, CoverageReport
+from . import AnalysisBackend, AnalysisMode
+from ..metrics import CallScore, CoverageReport
 
 
-class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
+class _BinjaAnalysisMeta(type(AnalysisBackend), type(BackgroundTaskThread)):
+    pass
+
+
+class BinjaAnalysis(
+    AnalysisBackend, BackgroundTaskThread, metaclass=_BinjaAnalysisMeta
+):
     """Derived class to support Binary Ninja, and can be dispatched as a task from the plugin."""
 
-    def __init__(self, target):
-        super(BinjaAnalysis, self).__init__(
-            "Finding fuzzable targets in current binary view"
+    def __init__(self, target: BinaryView, mode: AnalysisMode, headless: bool = False):
+        AnalysisBackend.__init__(self, target, mode)
+        BackgroundTaskThread.__init__(
+            self, "Finding fuzzable targets in current binary view"
         )
-        self.view: BinaryView = target
+        self.view = target
+        self.headless = headless
 
     def __str__(self) -> str:
         return "Binary Ninja"
 
-    def run(self, headless: bool = False) -> None:
+    def run(self) -> None:
         funcs = self.view.functions
 
         analyzed = []
@@ -42,8 +50,8 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
         for func in funcs:
             name = func.name
 
-            log.log_trace("Checking to see if we should ignore")
-            if BinjaAnalysis.ignore(func):
+            log.log_debug("Checking to see if we should ignore")
+            if BinjaAnalysis.skip_analysis(func):
                 continue
 
             # if recommend, filter and run only those that are top-level
@@ -69,8 +77,8 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
         log.log_info("Done, ranking the analyzed calls for reporting")
         ranked = sorted(analyzed, key=lambda x: (x.fuzzability, x.depth), reverse=True)
 
-        # TODO: fix
-        if not headless:
+        # if headless
+        if not self.headless:
             csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
             markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
             for score in ranked:
@@ -82,7 +90,7 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
             self.view.show_markdown_report("Fuzzable targets", markdown_result)
             return None
 
-    def analyze_call(self, name: str, func: t.Any) -> CallScore:
+    def analyze_call(self, name: str, func: Function) -> CallScore:
         stripped = "sub_" in name
 
         # no need to check if no name available
@@ -102,7 +110,7 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
         )
 
     @staticmethod
-    def skip_analysis(func) -> bool:
+    def skip_analysis(func: Function) -> bool:
         name = func.name
         symbol = func.symbol.type
         log.log_debug(f"{name} - {symbol}")
@@ -127,17 +135,17 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
         return False
 
     @staticmethod
-    def is_toplevel_call(target: t.Any) -> bool:
+    def is_toplevel_call(target: Function) -> bool:
         return len(target.callers) == 0
 
     @staticmethod
-    def has_risky_sink(self, func) -> bool:
+    def has_risky_sink(func: Function) -> bool:
         args = func.parameter_vars
         for arg in args:
             print(arg)
 
     @staticmethod
-    def get_coverage_depth(target) -> CoverageReport:
+    def get_coverage_depth(target: Function) -> CoverageReport:
         """
         Calculates coverage depth by doing a depth first search on function call graph,
         and return a final depth and flag denoting recursive implementation
@@ -174,22 +182,22 @@ class BinjaAnalysis(AnalysisBackend, BackgroundTaskThread):
         return (depth, recursive, visited)
 
     @staticmethod
-    def contains_loop(target) -> bool:
+    def contains_loop(target: Function) -> bool:
         return any([bb in bb.dominance_frontier for bb in target.basic_blocks])
 
 
-def run_fuzzable_recommend(view):
+def run_fuzzable_recommend(view) -> None:
     task = BinjaAnalysis(view, AnalysisMode.RECOMMEND)
     task.start()
 
 
-def run_fuzzable_rank(view):
+def run_fuzzable_rank(view) -> None:
     task = BinjaAnalysis(view, AnalysisMode.RANK)
     task.start()
 
 
-def run_export_report(view):
-    """Generate a report from a previous analysis, and export as CSV"""
+def run_export_csv(view: BinaryView) -> None:
+    """Generate a CSV report from a previous analysis"""
     log.log_info("Attempting to export results to CSV")
     try:
         csv_output = view.query_metadata("csv")
@@ -199,7 +207,6 @@ def run_export_report(view):
         )
         return
 
-    # write last analysis to filepath
     csv_file = interaction.get_save_filename_input("Filename to export as CSV?", "csv")
     csv_file = csv_file.decode("utf-8") + ".csv"
 
@@ -210,7 +217,21 @@ def run_export_report(view):
     interaction.show_message_box("Success", f"Done, exported to {csv_file}")
 
 
-def run_harness_generation(view, func):
+def run_export_md(view: BinaryView) -> None:
+    """Generate a markdown report from a previous analysis"""
+    log.log_info("Attempting to export results to markdown")
+    try:
+        markdown_output = view.query_metadata("md")
+    except KeyError:
+        interaction.show_message_box(
+            "Error", "Cannot export without running an analysis first."
+        )
+        return
+
+    # TODO
+
+
+def run_harness_generation(view, func) -> None:
     """Experimental automatic fuzzer harness generation support"""
 
     template_file = os.path.join(binaryninja.user_plugin_path(), "fuzzable")

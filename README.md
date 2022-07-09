@@ -25,6 +25,18 @@ _fallback_ backend is also supported. I anticipate to incorporate other disassem
 
 ### Command Line (Standalone)
 
+If you have Binary Ninja Commercial, be sure
+
+```
+$ python3 /Applications/Binary\ Ninja.app/Contents/Resources/scripts/install_api.py
+```
+
+Now install `fuzzable` with `pip`:
+
+```
+$ pip install fuzzable
+```
+
 ### Binary Ninja Plugin
 
 Here is an example of the __fuzzable__ plugin running on [cesanta/mjs](https://github.com/cesanta/mjs),

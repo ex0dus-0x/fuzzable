@@ -7,7 +7,7 @@ __init__.py
 from binaryninja.plugin import PluginCommand
 from binaryninja.settings import Settings
 
-from fuzzable.analysis import binja
+from .fuzzable.analysis import binja
 
 # configurable settings to tune
 Settings().register_group("fuzzable", "Fuzzable")
@@ -48,14 +48,14 @@ Settings().register_setting(
 )
 
 PluginCommand.register(
-    "Fuzzable\\Analysis Type\\Recommend Fuzzable Functions (much faster)",
+    "Fuzzable\\Analysis Mode\\Recommend Fuzzable Functions (much faster)",
     "List out functions we've determined to be the best candidates for fuzzing."
     "This will exclude functions that is determined to not be directly usable for a harness.",
     binja.run_fuzzable_recommend,
 )
 
 PluginCommand.register(
-    "Fuzzable\\Analysis Type\\Rank All Function by Fuzzability (more comprehensive)",
+    "Fuzzable\\Analysis Mode\\Rank All Function by Fuzzability (more comprehensive)",
     "Generate fuzzability scores for all functions and rank. This will not exclude any function.",
     binja.run_fuzzable_rank,
 )
@@ -63,13 +63,13 @@ PluginCommand.register(
 PluginCommand.register(
     "Fuzzable\\Export Fuzzability Report\\CSV (.csv)",
     "Identify and generate targets for fuzzing",
-    binja.run_export_report,
+    binja.run_export_csv,
 )
 
 PluginCommand.register(
     "Fuzzable\\Export Fuzzability Report\\ Markdown (.md)",
     "Identify and generate targets for fuzzing",
-    binja.run_export_report,
+    binja.run_export_md,
 )
 
 PluginCommand.register_for_function(

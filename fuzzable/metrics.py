@@ -1,5 +1,7 @@
 """
 metrics.py
+
+    Dataclass definitions for various metrics collected during the risk analysis.
 """
 import functools
 import typing as t
@@ -36,13 +38,13 @@ class CallScore:
 
     @property
     def table_row(self) -> str:
-        """Output as a Markdown row when displaying back to user"""
-        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.has_loop} | {self.recursive} | \n"
+        """Output as a markdown/ascii table row when displaying back to user"""
+        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.contains_loop} | {self.recursive} | \n"
 
     @property
     def csv_row(self) -> str:
         """Generate a CSV row for exporting to file"""
-        return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.has_loop}, {self.fuzzability}\n"
+        return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.contains_loop}, {self.fuzzability}\n"
 
     @functools.cached_property
     def fuzzability(self) -> float:
@@ -58,7 +60,7 @@ class CallScore:
             score += 1.0
 
             # name contains interesting patterns often useful for fuzz harnesses
-            if self.interesting_name:
+            if self.fuzz_friendly:
                 score += 1.0
 
         # function signature can directly consume fuzzer input

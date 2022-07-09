@@ -24,6 +24,7 @@ pycparser = "^2.21"
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
 black = { version = "^22.6.0", python = "^3.9" }
+mypy = "^0.961"
 
 [tool.poetry.scripts]
 fuzzable = "fuzzable.__main__:app"

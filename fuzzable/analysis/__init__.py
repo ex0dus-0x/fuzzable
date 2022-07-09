@@ -2,7 +2,7 @@ import abc
 import enum
 import typing as t
 
-from fuzzable.metrics import CallScore, CoverageReport
+from ..metrics import CallScore, CoverageReport
 
 # Interesting symbol name patterns to check for fuzzable
 INTERESTING_PATTERNS: t.List[str] = [
@@ -40,11 +40,9 @@ class AnalysisBackend(abc.ABC):
         # list of names to check to against
         self.cached_names: t.List[str] = []
 
-
     @abc.abstractmethod
     def __str__(self) -> str:
         pass
-
 
     @abc.abstractmethod
     def run(self) -> t.List[CallScore]:
@@ -55,7 +53,6 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
-
     @abc.abstractmethod
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
         """
@@ -64,7 +61,6 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
-
     @abc.abstractmethod
     def skip_analysis(self, func: t.Any) -> bool:
         """
@@ -72,7 +68,6 @@ class AnalysisBackend(abc.ABC):
         for analysis based on certain criteria for the analysis backend.
         """
         pass
-
 
     @staticmethod
     def is_fuzz_friendly(symbol_name: str) -> bool:
@@ -89,7 +84,6 @@ class AnalysisBackend(abc.ABC):
             ]
         )
 
-
     @staticmethod
     @abc.abstractmethod
     def is_toplevel_call(target: t.Any) -> bool:
@@ -98,7 +92,6 @@ class AnalysisBackend(abc.ABC):
         in the current binary/codebase context.
         """
         pass
-
 
     @staticmethod
     @abc.abstractmethod
@@ -110,7 +103,6 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
-
     @staticmethod
     @abc.abstractmethod
     def get_coverage_depth(func: t.Any) -> CoverageReport:
@@ -120,7 +112,6 @@ class AnalysisBackend(abc.ABC):
         a fuzzer would ideally explore at different granularities.
         """
         pass
-
 
     @staticmethod
     @abc.abstractmethod
