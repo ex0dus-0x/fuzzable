@@ -110,9 +110,8 @@ class AnalysisBackend(abc.ABC):
             ]
         )
 
-    @staticmethod
     @abc.abstractmethod
-    def is_toplevel_call(target: t.Any) -> bool:
+    def is_toplevel_call(self, target: t.Any) -> bool:
         """
         Checks to see if the function is top-level, aka is not invoked by any other function
         in the current binary/codebase context.
@@ -147,14 +146,22 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
-    @staticmethod
     @abc.abstractmethod
-    def contains_loop(func: t.Any) -> bool:
+    def contains_loop(self, func: t.Any) -> bool:
         """
         HEURISTIC
         Detection of loops is at a basic block level by checking the dominance frontier,
         which denotes the next successor the current block node will definitely reach. If the
         same basic block exists in the dominance frontier set, then that means the block will
         loop back to itself at some point in execution.
+        """
+        pass
+
+    @abc.abstractclassmethod
+    def get_cyclomatic_complexity(self) -> int:
+        """
+        HEURISTIC
+
+        M = E − N + 2P
         """
         pass

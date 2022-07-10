@@ -4,43 +4,44 @@ ast.py
     Fuzzable analysis support for C/C++ code by through query on top of pycparser ASTs.
 
 """
+import sys
 import typing as t
 
 from pycparser import c_ast, parse_file
 
-from . import AnalysisBackend, AnalysisMode
+from . import AnalysisBackend, AnalysisMode, Fuzzability
 from ..metrics import CallScore, CoverageReport
 
+sys.path.extend(['.', '..'])
 
-class FuncCallVisitor(c_ast.NodeVisitor):
-    def __init__(self, funcname):
-        self.funcname = funcname
+class FuncDefVisitor(c_ast.NodeVisitor):
+    """
+    Visitor for
+    """
 
-    def visit_FuncCall(self, node):
-        if node.name.name == self.funcname:
-            print("%s called at %s" % (self.funcname, node.name.coord))
-        # Visit args in case they contain more func calls.
-        if node.args:
-            self.visit(node.args)
+    def __init__(self):
+        self.call_nodes = []
 
-
-def show_func_calls(filename, funcname):
-    ast = parse_file(filename, use_cpp=False)
-    v = FuncCallVisitor(funcname)
-    v.visit(ast)
+    def visit_FuncDef(self, node):
+        print('%s at %s' % (node.decl.name, node.decl.coord))
 
 
 class AstAnalysis(AnalysisBackend):
     """Derived class to support parsing C/C++ ASTs with pycparser"""
 
     def __init__(self, target: t.List[str], mode: AnalysisMode):
-        super(AstAnalysis).__init__(self, target, mode)
+        super().__init__(target, mode)
 
     def __str__(self) -> str:
         return "pycparser"
 
-    def run(self) -> t.List[CallScore]:
-        show_func_calls(self.target, "main")
+    def run(self) -> Fuzzability:
+        analyzed = []
+        for filename in self.target:
+            ast = parse_file(filename, cpp_path='gcc')
+
+            v = FuncDefVisitor()
+            v.visit(ast)
 
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
         pass
@@ -48,18 +49,14 @@ class AstAnalysis(AnalysisBackend):
     def skip_analysis(self, func: t.Any) -> bool:
         pass
 
-    @staticmethod
-    def is_toplevel_call(target: t.Any) -> bool:
+    def is_toplevel_call(self, target: t.Any) -> bool:
         pass
 
-    @staticmethod
-    def has_risky_sink(func: t.Any) -> bool:
+    def risky_sinks(self, func: t.Any) -> int:
         pass
 
-    @staticmethod
-    def get_coverage_depth(func: t.Any) -> CoverageReport:
+    def get_coverage_depth(self, func: t.Any) -> int:
         pass
 
-    @staticmethod
-    def contains_loop(func: t.Any) -> bool:
+    def contains_loop(self, func: t.Any) -> bool:
         pass

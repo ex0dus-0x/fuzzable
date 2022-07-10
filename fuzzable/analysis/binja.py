@@ -19,7 +19,7 @@ from binaryninja.enums import LowLevelILOperation, SymbolType
 from binaryninja.settings import Settings
 from binaryninja.plugin import BackgroundTaskThread
 
-from . import AnalysisBackend, AnalysisMode, Fuzzability, RISKY_GLIBC_CALL_PATTERNS
+from . import AnalysisBackend, AnalysisMode, Fuzzability
 from ..metrics import CallScore, CoverageReport
 
 
@@ -52,13 +52,13 @@ class BinjaAnalysis(
             name = func.name
 
             log.log_debug("Checking to see if we should ignore")
-            if BinjaAnalysis.skip_analysis(func):
+            if self.skip_analysis(func):
                 continue
 
             # if recommend mode, filter and run only those that are top-level
             if (
                 self.mode == AnalysisMode.RECOMMEND
-                and not BinjaAnalysis.is_toplevel_call(func)
+                and not self.is_toplevel_call(func)
             ):
                 continue
 
@@ -105,7 +105,7 @@ class BinjaAnalysis(
 
         return CallScore(
             name=name,
-            toplevel=BinjaAnalysis.is_toplevel_call(func),
+            toplevel=self.is_toplevel_call(func),
             fuzz_friendly=fuzz_friendly,
             risky_sinks=self.risky_sinks(func),
             contains_loop=BinjaAnalysis.contains_loop(func),
@@ -113,8 +113,7 @@ class BinjaAnalysis(
             stripped=stripped,
         )
 
-    @staticmethod
-    def skip_analysis(func: Function) -> bool:
+    def skip_analysis(self, func: Function) -> bool:
         name = func.name
         symbol = func.symbol.type
         log.log_debug(f"{name} - {symbol}")
@@ -138,8 +137,7 @@ class BinjaAnalysis(
 
         return False
 
-    @staticmethod
-    def is_toplevel_call(target: Function) -> bool:
+    def is_toplevel_call(self, target: Function) -> bool:
         return len(target.callers) == 0
 
     def risky_sinks(self, func: Function) -> int:

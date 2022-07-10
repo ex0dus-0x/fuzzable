@@ -17,7 +17,6 @@ class CoverageReport:
     function_depth: int
     ins_depth: int
 
-
 @dataclass
 class CallScore:
     """Assigned fuzzability score for an individual function target."""
@@ -77,12 +76,4 @@ class CallScore:
         if not loop_increase and self.has_loop:
             score += 1.0
         """
-
-        # auxiliary: recursive call doesn't change score, but useful information
         return score
-
-    @functools.cached_property
-    def fuzzability(self) -> float:
-        df = pandas.DataFrame(asdi)
-        criteria_data = Data()
-        return 0.0

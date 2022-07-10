@@ -71,7 +71,7 @@ def run_on_file(target: Path, mode: AnalysisMode) -> None:
     """Runs analysis on a single source code file or binary file."""
     analyzer: t.TypeVar[AnalysisBackend]
     if target.suffix in SOURCE_FILE_EXTS:
-        analyzer = AstAnalysis(target, mode)
+        analyzer = AstAnalysis([target], mode)
     else:
 
         # prioritize loading binja as a backend, this may not
@@ -92,7 +92,7 @@ def run_on_file(target: Path, mode: AnalysisMode) -> None:
             typer.echo(
                 f"Cannot load Binary Ninja as a backend. Reason: {err}. Attempting to load angr instead."
             )
-            proj = angr.Project(target)
+            proj = angr.Project(target, load_options={'auto_load_libs' : False})
             analyzer = AngrAnalysis(proj, mode)
         else:
             exception = typer.style(
@@ -125,8 +125,10 @@ def run_on_workspace(target: Path, mode: AnalysisMode) -> None:
         typer.echo(exception)
         return
 
-    for path in source_files:
-        print(target / path)
+    analyzer = AstAnalysis(source_files, mode)
+    typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
+    analyzer.run()
+
 
 
 @app.command()
