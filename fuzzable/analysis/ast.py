@@ -1,8 +1,7 @@
 """
 ast.py
 
-    Fuzzable analysis support for C/C++ code by through query
-    on top of pycparser ASTs.
+    Fuzzable analysis support for C/C++ code by through query on top of pycparser ASTs.
 
 """
 import typing as t
@@ -32,7 +31,10 @@ def show_func_calls(filename, funcname):
 
 
 class AstAnalysis(AnalysisBackend):
-    """Derived class"""
+    """Derived class to support parsing C/C++ ASTs with pycparser"""
+
+    def __init__(self, target: t.List[str], mode: AnalysisMode):
+        super(AstAnalysis).__init__(self, target, mode)
 
     def __str__(self) -> str:
         return "pycparser"

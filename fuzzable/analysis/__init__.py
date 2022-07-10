@@ -1,6 +1,11 @@
 import abc
+import dataclasses
 import enum
 import typing as t
+
+import pandas as pd
+import skcriteria as skc
+from collections import OrderedDict
 
 from ..metrics import CallScore, CoverageReport
 
@@ -16,7 +21,14 @@ INTERESTING_PATTERNS: t.List[str] = [
 ]
 
 # TODO: dataset of risky function calls
-RISKY_GLIBC_CALLS: t.List[str] = []
+RISKY_GLIBC_CALL_PATTERNS: t.List[str] = [
+    "cmp",
+    "cpy",
+    "free",
+]
+
+# Type sig for a finalized list
+Fuzzability = t.OrderedDict[str, CallScore]
 
 
 class AnalysisException(Exception):
@@ -40,18 +52,32 @@ class AnalysisBackend(abc.ABC):
         # list of names to check to against
         self.cached_names: t.List[str] = []
 
+        # stores only the name of the symbol we've already visited, is less expensive
+        self.visited = []
+
     @abc.abstractmethod
     def __str__(self) -> str:
         pass
 
     @abc.abstractmethod
-    def run(self) -> t.List[CallScore]:
+    def run(self) -> Fuzzability:
         """
         Determine the fuzzability of each function in the binary or source targets.
         If the mode to recommend targets, determine and statically analyze only top-level calls.
         If the mode is to rank targets, iterate and analyze over all calls and rank.
         """
         pass
+
+    def _rank_fuzzability(self, unranked: t.List[CallScore]) -> Fuzzability:
+        """
+        After analyzing each function call, rank based on the call score
+
+        This should be the tail call for run, as it produces the finalized results
+        """
+        fuzzability = OrderedDict()
+        unranked_df = pd.json_normalize(dataclasses.asdict(obj) for obj in unranked)
+        print(unranked_df)
+        return fuzzability
 
     @abc.abstractmethod
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
@@ -93,9 +119,8 @@ class AnalysisBackend(abc.ABC):
         """
         pass
 
-    @staticmethod
     @abc.abstractmethod
-    def has_risky_sink(func: t.Any) -> bool:
+    def risky_sinks(self, func: t.Any) -> int:
         """
         HEURISTIC
         Checks to see if one or more of the function's arguments is
@@ -104,8 +129,17 @@ class AnalysisBackend(abc.ABC):
         pass
 
     @staticmethod
+    def _is_risky_call(name: str) -> bool:
+        """Helper to see if a function call deems potentially risky behaviors."""
+        return any(
+            [
+                pattern in name or pattern.lower() in name
+                for pattern in RISKY_GLIBC_CALL_PATTERNS
+            ]
+        )
+
     @abc.abstractmethod
-    def get_coverage_depth(func: t.Any) -> CoverageReport:
+    def get_coverage_depth(self, func: t.Any) -> int:
         """
         HEURISTIC
         Calculates and returns a `CoverageReport` that highlights how much

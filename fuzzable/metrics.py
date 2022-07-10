@@ -11,9 +11,7 @@ from dataclasses import dataclass
 
 @dataclass
 class CoverageReport:
-    """
-    At a given function symbol, calculate the coverage depth at
-    """
+    """TODO"""
 
     bb_depth: int
     function_depth: int
@@ -26,15 +24,24 @@ class CallScore:
 
     name: str
 
+    # does not attribute to rank, but helps with determining what to filter
     toplevel: bool
 
-    fuzz_friendly: bool
-    has_risky_sink: bool
-    contains_loop: bool
-    coverage_depth: CoverageReport
-
-    # binary-only, optional
+    # does not attribute to rank, but helps with binary analysis
     stripped: t.Optional[bool]
+
+    # quantifies the number of fuzzer friendly words that exist in the target's name
+    fuzz_friendly: int
+
+    # quantifies the number of fuzzer arguments that flow into
+    risky_sinks: int
+
+    # TODO: cyclomatic complexity
+    contains_loop: int
+
+    # represents coverage by different granularities
+    #coverage_depth: CoverageReport
+    coverage_depth: int
 
     @property
     def table_row(self) -> str:
@@ -47,24 +54,17 @@ class CallScore:
         return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.contains_loop}, {self.fuzzability}\n"
 
     @functools.cached_property
-    def fuzzability(self) -> float:
+    def simple_fuzzability(self) -> int:
         """
         Calculate a cached fuzzability score for the given function target based on the analysis metrics.
         """
 
-        score = 0.0
-
-        # function is publicly exposed
+        score = 0
         if not self.stripped:
-            score += 1.0
-
-            # name contains interesting patterns often useful for fuzz harnesses
-            if self.fuzz_friendly:
-                score += 1.0
-
-        # function signature can directly consume fuzzer input
-        if self.has_risky_sink:
-            score += 1.0
+            score += 1
+        
+        score += self.fuzz_friendly
+        score += self.risky_sinks
 
         """
         # function achieved an optimal threshold of coverage to be fuzzed
@@ -80,3 +80,9 @@ class CallScore:
 
         # auxiliary: recursive call doesn't change score, but useful information
         return score
+
+    @functools.cached_property
+    def fuzzability(self) -> float:
+        df = pandas.DataFrame(asdi)
+        criteria_data = Data()
+        return 0.0

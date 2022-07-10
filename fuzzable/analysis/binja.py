@@ -7,6 +7,7 @@ binja.py
 
 """
 import os
+import typing as t
 
 import binaryninja
 import binaryninja.log as log
@@ -14,11 +15,11 @@ import binaryninja.interaction as interaction
 
 from binaryninja import BinaryView
 from binaryninja.function import Function
-from binaryninja.enums import SymbolType
+from binaryninja.enums import LowLevelILOperation, SymbolType 
 from binaryninja.settings import Settings
 from binaryninja.plugin import BackgroundTaskThread
 
-from . import AnalysisBackend, AnalysisMode
+from . import AnalysisBackend, AnalysisMode, Fuzzability, RISKY_GLIBC_CALL_PATTERNS
 from ..metrics import CallScore, CoverageReport
 
 
@@ -42,7 +43,7 @@ class BinjaAnalysis(
     def __str__(self) -> str:
         return "Binary Ninja"
 
-    def run(self) -> None:
+    def run(self) -> t.Optional[Fuzzability]:
         funcs = self.view.functions
 
         analyzed = []
@@ -54,7 +55,7 @@ class BinjaAnalysis(
             if BinjaAnalysis.skip_analysis(func):
                 continue
 
-            # if recommend, filter and run only those that are top-level
+            # if recommend mode, filter and run only those that are top-level
             if (
                 self.mode == AnalysisMode.RECOMMEND
                 and not BinjaAnalysis.is_toplevel_call(func)
@@ -66,22 +67,23 @@ class BinjaAnalysis(
 
             # if a loop is detected in the target, and it exists as part a callgraph,
             # set has_loop for that parent as well
+            """
             for prev in analyzed:
                 if score.has_loop and score.name in prev.visited:
                     prev.has_loop = True
+            """
 
             # TODO: more filtering with RECOMMEND
             analyzed += [score]
-
-        # sort parsed by highest fuzzability score
+        
         log.log_info("Done, ranking the analyzed calls for reporting")
-        ranked = sorted(analyzed, key=lambda x: (x.fuzzability, x.depth), reverse=True)
+        ranked = super()._rank_fuzzability(analyzed)
 
-        # if headless
+        # if headless, handle displaying results back
         if not self.headless:
             csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
             markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
-            for score in ranked:
+            for score in analyzed:
                 markdown_result += score.table_row
                 csv_result += score.csv_row
 
@@ -89,6 +91,8 @@ class BinjaAnalysis(
             self.view.store_metadata("csv", csv_result)
             self.view.show_markdown_report("Fuzzable targets", markdown_result)
             return None
+
+        return ranked
 
     def analyze_call(self, name: str, func: Function) -> CallScore:
         stripped = "sub_" in name
@@ -103,9 +107,9 @@ class BinjaAnalysis(
             name=name,
             toplevel=BinjaAnalysis.is_toplevel_call(func),
             fuzz_friendly=fuzz_friendly,
-            has_risky_sink=BinjaAnalysis.has_risky_sink(func),
+            risky_sinks=self.risky_sinks(func),
             contains_loop=BinjaAnalysis.contains_loop(func),
-            coverage_depth=BinjaAnalysis.get_coverage_depth(func),
+            coverage_depth=self.get_coverage_depth(func),
             stripped=stripped,
         )
 
@@ -138,22 +142,53 @@ class BinjaAnalysis(
     def is_toplevel_call(target: Function) -> bool:
         return len(target.callers) == 0
 
-    @staticmethod
-    def has_risky_sink(func: Function) -> bool:
-        pass
+    def risky_sinks(self, func: Function) -> int:
+        """ 
+        For each parameter in the function, determine if it flows into a known risky
+        function call.
+        """
 
-    @staticmethod
-    def get_coverage_depth(target: Function) -> CoverageReport:
+        risky_sinks = 0
+
+        # visit all other calls with depth-first search until we reach a risky sink
+        callstack = [func]
+        while callstack:
+            func = callstack.pop()
+        
+            # Iterate over each argument and check for taint sinks
+            for arg in func.parameter_vars:
+                arg_refs = func.get_hlil_var_refs(arg)
+                
+                log.log_debug(f"{func.name}: {arg_refs}")
+                for ref in arg_refs:
+                    insn = ref.arch.get_instruction_low_level_il_instruction(self.view, ref.address)
+
+                    log.log_debug(f"{insn} - {insn.operation}")
+
+                    # if call instruction, check out for risky pattern
+                    if insn.operation in [LowLevelILOperation.LLIL_CALL, LowLevelILOperation.LLIL_JUMP]:
+                        callee = self.view.get_function_at(int(insn.dest))
+                        call = callee.name
+
+                        # TODO: should we traverse further if not a imported func
+                        if BinjaAnalysis._is_risky_call(call):
+                            risky_sinks += 1
+                        
+                        # otherwise add to callstack and continue to trace arguments
+                        elif (call is SymbolType.ImportedFunctionSymbol) or (
+                            call is SymbolType.LibraryFunctionSymbol
+                        ):
+                            callstack += [callee]
+        
+        return risky_sinks
+
+    def get_coverage_depth(self, target: Function) -> int:
         """
         Calculates coverage depth by doing a depth first search on function call graph,
         and return a final depth and flag denoting recursive implementation
         """
 
         depth = 0
-        recursive = False
-
-        # stores only the name of the symbol we've already visited, is less expensive
-        visited = []
 
         # as we iterate over callees, add to a callstack and iterate over callees
         # for those as well, adding to the callgraph until we're done with all
@@ -166,18 +201,12 @@ class BinjaAnalysis(
 
             # add all childs to callgraph, and add those we haven't recursed into callstack
             for child in func.callees:
-                if child.name not in visited:
+                if child.name not in self.visited:
                     callstack += [child]
 
-                # set flag if function makes call at some point back to current target,
-                # increment cycle if recursive child is primary target itself,
-                # meaning, there is recursion involved.
-                elif child.name == target.name:
-                    recursive = True
+            self.visited += [func.name]
 
-            visited += [func.name]
-
-        return (depth, recursive, visited)
+        return depth
 
     @staticmethod
     def contains_loop(target: Function) -> bool:

@@ -21,6 +21,7 @@ angr = "^9.2.8"
 prettytable = "^3.3.0"
 pycparser = "^2.21"
 lief = "^0.12.1"
+scikit-criteria = "^0.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

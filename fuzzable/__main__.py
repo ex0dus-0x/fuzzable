@@ -33,7 +33,7 @@ def analyze(
     ),
     rec_export: t.Optional[bool] = typer.Option(
         False,
-        help="If `--mode=recommend,` automatically attempt to generate harnesses for every candidate."
+        help="If `--mode=recommend,` automatically attempt to generate harnesses for every candidate.",
     ),
     out_csv: t.Optional[str] = typer.Option(
         "temp.csv",

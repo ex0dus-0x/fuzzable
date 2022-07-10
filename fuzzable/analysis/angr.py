@@ -5,7 +5,7 @@ angr.py
 """
 import typing as t
 
-from . import AnalysisBackend, AnalysisMode
+from . import AnalysisBackend, AnalysisMode, Fuzzability
 from ..metrics import CallScore, CoverageReport
 
 
@@ -13,7 +13,7 @@ class AngrAnalysis(AnalysisBackend):
     def __str__(self) -> str:
         return "angr"
 
-    def run(self) -> t.List[CallScore]:
+    def run(self) -> Fuzzability:
         pass
 
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
