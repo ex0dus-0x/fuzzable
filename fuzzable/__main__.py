@@ -130,7 +130,6 @@ def run_on_workspace(target: Path, mode: AnalysisMode) -> None:
     analyzer.run()
 
 
-
 @app.command()
 def create_harness(
     target: Path,

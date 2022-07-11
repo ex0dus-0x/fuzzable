@@ -26,6 +26,7 @@ def transform_elf_to_so(
         return None
 
     for sym in exports:
+        addr = lief.get_function_address(sym)
         lib.add_exported_function(addr, sym)
 
     if not override_path:

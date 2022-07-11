@@ -4,7 +4,7 @@ import enum
 import typing as t
 
 import pandas as pd
-import skcriteria as skc
+from skcriteria import Data
 from collections import OrderedDict
 
 from ..metrics import CallScore, CoverageReport
@@ -76,7 +76,11 @@ class AnalysisBackend(abc.ABC):
         """
         fuzzability = OrderedDict()
         unranked_df = pd.json_normalize(dataclasses.asdict(obj) for obj in unranked)
-        print(unranked_df)
+        criteria_data = Data(
+            unranked_df,
+            [MAX, MAX, MAX, MAX, MAX],
+        )
+
         return fuzzability
 
     @abc.abstractmethod

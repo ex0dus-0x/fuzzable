@@ -210,6 +210,15 @@ class BinjaAnalysis(
     def contains_loop(target: Function) -> bool:
         return any([bb in bb.dominance_frontier for bb in target.basic_blocks])
 
+    def get_cyclomatic_complexity(self) -> int:
+        """
+        HEURISTIC
+
+        M = E − N + 2P
+        """
+        pass
+
+
 
 def run_fuzzable_recommend(view) -> None:
     task = BinjaAnalysis(view, AnalysisMode.RECOMMEND)

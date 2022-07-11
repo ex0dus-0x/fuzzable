@@ -83,3 +83,12 @@ class AngrAnalysis(AnalysisBackend):
 
     def contains_loop(self, func: t.Any) -> bool:
         pass
+
+    def get_cyclomatic_complexity(self) -> int:
+        """
+        HEURISTIC
+
+        M = E − N + 2P
+        """
+        pass
+

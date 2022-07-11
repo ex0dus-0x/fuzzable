@@ -38,7 +38,7 @@ class AstAnalysis(AnalysisBackend):
     def run(self) -> Fuzzability:
         analyzed = []
         for filename in self.target:
-            ast = parse_file(filename, cpp_path='gcc')
+            ast = parse_file(filename, cpp_path='cpp')
 
             v = FuncDefVisitor()
             v.visit(ast)
@@ -59,4 +59,12 @@ class AstAnalysis(AnalysisBackend):
         pass
 
     def contains_loop(self, func: t.Any) -> bool:
+        pass
+
+    def get_cyclomatic_complexity(self) -> int:
+        """
+        HEURISTIC
+
+        M = E − N + 2P
+        """
         pass
