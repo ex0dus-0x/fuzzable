@@ -15,7 +15,7 @@ import binaryninja.interaction as interaction
 
 from binaryninja import BinaryView
 from binaryninja.function import Function
-from binaryninja.enums import LowLevelILOperation, SymbolType 
+from binaryninja.enums import LowLevelILOperation, SymbolType
 from binaryninja.settings import Settings
 from binaryninja.plugin import BackgroundTaskThread
 
@@ -46,7 +46,6 @@ class BinjaAnalysis(
     def run(self) -> t.Optional[Fuzzability]:
         funcs = self.view.functions
 
-        analyzed = []
         log.log_info(f"Starting fuzzable analysis over {len(funcs)} symbols in binary")
         for func in funcs:
             name = func.name
@@ -56,10 +55,7 @@ class BinjaAnalysis(
                 continue
 
             # if recommend mode, filter and run only those that are top-level
-            if (
-                self.mode == AnalysisMode.RECOMMEND
-                and not self.is_toplevel_call(func)
-            ):
+            if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
                 continue
 
             log.log_info(f"Starting analysis for function {name}")
@@ -74,16 +70,16 @@ class BinjaAnalysis(
             """
 
             # TODO: more filtering with RECOMMEND
-            analyzed += [score]
-        
+            self.scores += [score]
+
         log.log_info("Done, ranking the analyzed calls for reporting")
-        ranked = super()._rank_fuzzability(analyzed)
+        ranked = super()._rank_fuzzability(self.scores)
 
         # if headless, handle displaying results back
         if not self.headless:
             csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
             markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
-            for score in analyzed:
+            for score in self.scores:
                 markdown_result += score.table_row
                 csv_result += score.csv_row
 
@@ -141,7 +137,7 @@ class BinjaAnalysis(
         return len(target.callers) == 0
 
     def risky_sinks(self, func: Function) -> int:
-        """ 
+        """
         For each parameter in the function, determine if it flows into a known risky
         function call.
         """
@@ -152,32 +148,37 @@ class BinjaAnalysis(
         callstack = [func]
         while callstack:
             func = callstack.pop()
-        
+
             # Iterate over each argument and check for taint sinks
             for arg in func.parameter_vars:
                 arg_refs = func.get_hlil_var_refs(arg)
-                
+
                 log.log_debug(f"{func.name}: {arg_refs}")
                 for ref in arg_refs:
-                    insn = ref.arch.get_instruction_low_level_il_instruction(self.view, ref.address)
+                    insn = ref.arch.get_instruction_low_level_il_instruction(
+                        self.view, ref.address
+                    )
 
                     log.log_debug(f"{insn} - {insn.operation}")
 
                     # if call instruction, check out for risky pattern
-                    if insn.operation in [LowLevelILOperation.LLIL_CALL, LowLevelILOperation.LLIL_JUMP]:
+                    if insn.operation in [
+                        LowLevelILOperation.LLIL_CALL,
+                        LowLevelILOperation.LLIL_JUMP,
+                    ]:
                         callee = self.view.get_function_at(int(insn.dest))
                         call = callee.name
 
                         # TODO: should we traverse further if not a imported func
                         if BinjaAnalysis._is_risky_call(call):
                             risky_sinks += 1
-                        
+
                         # otherwise add to callstack and continue to trace arguments
                         elif (call is SymbolType.ImportedFunctionSymbol) or (
                             call is SymbolType.LibraryFunctionSymbol
                         ):
                             callstack += [callee]
-        
+
         return risky_sinks
 
     def get_coverage_depth(self, target: Function) -> int:
@@ -217,7 +218,6 @@ class BinjaAnalysis(
         M = E − N + 2P
         """
         pass
-
 
 
 def run_fuzzable_recommend(view) -> None:

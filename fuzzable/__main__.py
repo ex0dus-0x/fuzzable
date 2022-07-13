@@ -92,7 +92,7 @@ def run_on_file(target: Path, mode: AnalysisMode) -> None:
             typer.echo(
                 f"Cannot load Binary Ninja as a backend. Reason: {err}. Attempting to load angr instead."
             )
-            proj = angr.Project(target, load_options={'auto_load_libs' : False})
+            proj = angr.Project(target, load_options={"auto_load_libs": False})
             analyzer = AngrAnalysis(proj, mode)
         else:
             exception = typer.style(
@@ -103,7 +103,8 @@ def run_on_file(target: Path, mode: AnalysisMode) -> None:
             typer.echo(exception)
 
     typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
-    analyzer.run()
+    fuzzability = analyzer.run()
+    print(fuzzability)
 
 
 def run_on_workspace(target: Path, mode: AnalysisMode) -> None:
@@ -127,7 +128,8 @@ def run_on_workspace(target: Path, mode: AnalysisMode) -> None:
 
     analyzer = AstAnalysis(source_files, mode)
     typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
-    analyzer.run()
+    fuzzability = analyzer.run()
+    print(fuzzability)
 
 
 @app.command()

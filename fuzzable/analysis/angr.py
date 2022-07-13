@@ -36,7 +36,6 @@ class AngrAnalysis(AnalysisBackend):
 
         return super()._rank_fuzzability(analyzed)
 
-
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
         stripped = "sub_" in name
 
@@ -44,7 +43,7 @@ class AngrAnalysis(AnalysisBackend):
         # TODO: maybe we should run this if a signature was recovered
         fuzz_friendly = False
         if not stripped:
-            fuzz_friendly = AngrAnalysis.is_fuzz_friendly(name)  
+            fuzz_friendly = AngrAnalysis.is_fuzz_friendly(name)
 
         return CallScore(
             name=name,
@@ -65,11 +64,11 @@ class AngrAnalysis(AnalysisBackend):
 
         if name.startswith("_"):
             return True
-        
+
         # if set, ignore all stripped functions for faster analysis
         if ("sub_" in name) or ("Unresolvable" in name):
             return True
-        
+
         return False
 
     def is_toplevel_call(self, target: t.Any) -> bool:
@@ -91,4 +90,3 @@ class AngrAnalysis(AnalysisBackend):
         M = E − N + 2P
         """
         pass
-

@@ -4,10 +4,11 @@ import enum
 import typing as t
 
 import pandas as pd
-from skcriteria import Data
+import skcriteria as skc
+
 from collections import OrderedDict
 
-from ..metrics import CallScore, CoverageReport
+from ..metrics import CallScore
 
 # Interesting symbol name patterns to check for fuzzable
 INTERESTING_PATTERNS: t.List[str] = [
@@ -49,11 +50,10 @@ class AnalysisBackend(abc.ABC):
         self.target = target
         self.mode = mode
 
-        # list of names to check to against
-        self.cached_names: t.List[str] = []
+        self.scores: t.List[t.Any] = []
 
         # stores only the name of the symbol we've already visited, is less expensive
-        self.visited = []
+        self.parsed_symbols: t.List[t.Any] = []
 
     @abc.abstractmethod
     def __str__(self) -> str:
@@ -76,11 +76,6 @@ class AnalysisBackend(abc.ABC):
         """
         fuzzability = OrderedDict()
         unranked_df = pd.json_normalize(dataclasses.asdict(obj) for obj in unranked)
-        criteria_data = Data(
-            unranked_df,
-            [MAX, MAX, MAX, MAX, MAX],
-        )
-
         return fuzzability
 
     @abc.abstractmethod

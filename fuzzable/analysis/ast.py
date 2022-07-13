@@ -4,53 +4,110 @@ ast.py
     Fuzzable analysis support for C/C++ code by through query on top of pycparser ASTs.
 
 """
-import sys
 import typing as t
 
-from pycparser import c_ast, parse_file
+from tree_sitter import Language, Node, Parser
 
 from . import AnalysisBackend, AnalysisMode, Fuzzability
-from ..metrics import CallScore, CoverageReport
+from ..metrics import CallScore
 
-sys.path.extend(['.', '..'])
-
-class FuncDefVisitor(c_ast.NodeVisitor):
-    """
-    Visitor for
-    """
-
-    def __init__(self):
-        self.call_nodes = []
-
-    def visit_FuncDef(self, node):
-        print('%s at %s' % (node.decl.name, node.decl.coord))
+BUILD_PATH = "build/lang.so"
 
 
 class AstAnalysis(AnalysisBackend):
     """Derived class to support parsing C/C++ ASTs with pycparser"""
 
     def __init__(self, target: t.List[str], mode: AnalysisMode):
+        Language.build_library(
+            BUILD_PATH,
+            ["third_party/tree-sitter-c", "third_party/tree-sitter-cpp"],
+        )
+        self.language = Language(BUILD_PATH, "c")
+        self.parser = Parser()
         super().__init__(target, mode)
 
     def __str__(self) -> str:
-        return "pycparser"
+        return "tree-sitter"
 
     def run(self) -> Fuzzability:
-        analyzed = []
         for filename in self.target:
-            ast = parse_file(filename, cpp_path='cpp')
 
-            v = FuncDefVisitor()
-            v.visit(ast)
+            # switch over language if different language detected
+            if filename.suffix in [".cpp", ".cc", ".hpp", ".hh"]:
+                self.language = Language(BUILD_PATH, "cpp")
+            else:
+                self.language = Language(BUILD_PATH, "c")
 
-    def analyze_call(self, name: str, func: t.Any) -> CallScore:
-        pass
+            self.parser.set_language(self.language)
+
+            with open(filename, "rb") as fd:
+                contents = fd.read()
+
+            tree = self.parser.parse(contents)
+            # print(tree.root_node.sexp())
+
+            query = self.language.query(
+                """
+            (function_definition) @capture
+            """
+            )
+            self.parsed_symbols += [query.captures(tree.root_node)]
+
+        # now analyze each function_definition node
+        for func in self.parsed_symbols:
+            if self.skip_analysis(func):
+                continue
+    
+            # if recommend mode, filter and run only those that are top-level
+            if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
+                continue
+
+            # get function name from the node
+            query = self.language.query(
+                """
+            (identifier) @capture
+            """
+            )
+            name = query.captures(func)
+            score = [self.analyze_call(name, func)]
+
+            self.scores += [score]
+
+        ranked = super()._rank_fuzzability(self.scores)
+        return ranked
+
+    def analyze_call(self, name: str, func: Node) -> CallScore:
+        return CallScore(
+            name=name,
+            toplevel=self.is_toplevel_call(func),
+            fuzz_friendly=AstAnalysis.is_fuzz_friendly(name),
+            risky_sinks=self.risky_sinks(func),
+            contains_loop=AstAnalysis.contains_loop(func),
+            coverage_depth=self.get_coverage_depth(func),
+        )
 
     def skip_analysis(self, func: t.Any) -> bool:
-        pass
+        """
+        TODO
+        - match on standard library calls
+        - skip inlined calls
+        """
+        return False
 
     def is_toplevel_call(self, target: t.Any) -> bool:
-        pass
+        """
+        TODO
+        - check if node is a callee of any other nodes cached currently
+        """
+        for node in self.parsed_symbols:
+            query = self.language.query(
+                """
+            (function_definition) @capture
+            """
+            )
+            query.captures(node)
+
+        return False
 
     def risky_sinks(self, func: t.Any) -> int:
         pass

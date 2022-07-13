@@ -17,6 +17,7 @@ class CoverageReport:
     function_depth: int
     ins_depth: int
 
+
 @dataclass
 class CallScore:
     """Assigned fuzzability score for an individual function target."""
@@ -39,7 +40,7 @@ class CallScore:
     contains_loop: int
 
     # represents coverage by different granularities
-    #coverage_depth: CoverageReport
+    # coverage_depth: CoverageReport
     coverage_depth: int
 
     @property
@@ -61,7 +62,7 @@ class CallScore:
         score = 0
         if not self.stripped:
             score += 1
-        
+
         score += self.fuzz_friendly
         score += self.risky_sinks
 

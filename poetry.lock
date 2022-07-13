@@ -1,6 +1,6 @@
 [[package]]
 name = "ailment"
-version = "9.2.8"
+version = "9.2.10"
 description = "The angr intermediate language."
 category = "main"
 optional = false
@@ -8,20 +8,20 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "angr"
-version = "9.2.8"
+version = "9.2.10"
 description = "A multi-architecture binary analysis toolkit, with the ability to perform dynamic symbolic execution and various static analyses on binaries"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [package.dependencies]
-ailment = "9.2.8"
-archinfo = "9.2.8"
+ailment = "9.2.10"
+archinfo = "9.2.10"
 cachetools = "*"
 capstone = ">=3.0.5rc2,<5.0.0rc2 || >5.0.0rc2"
 cffi = ">=1.14.0"
-claripy = "9.2.8"
-cle = "9.2.8"
+claripy = "9.2.10"
+cle = "9.2.10"
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 CppHeaderParser = "*"
 dpkt = "*"
@@ -34,7 +34,7 @@ progressbar2 = ">=3"
 protobuf = ">=3.19.0"
 psutil = "*"
 pycparser = ">=2.18"
-pyvex = "9.2.8"
+pyvex = "9.2.10"
 rpyc = "*"
 sortedcontainers = "*"
 sympy = "*"
@@ -46,7 +46,7 @@ pcode = ["pypcode (==1.0.5)"]
 
 [[package]]
 name = "archinfo"
-version = "9.2.8"
+version = "9.2.10"
 description = "Classes with architecture-specific information useful to other projects."
 category = "main"
 optional = false
@@ -54,7 +54,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "atomicwrites"
-version = "1.4.0"
+version = "1.4.1"
 description = "Atomic file writes."
 category = "dev"
 optional = false
@@ -133,7 +133,7 @@ pycparser = "*"
 
 [[package]]
 name = "claripy"
-version = "9.2.8"
+version = "9.2.10"
 description = "An abstraction layer for constraint solvers"
 category = "main"
 optional = false
@@ -147,7 +147,7 @@ z3-solver = ">=4.8.5.0"
 
 [[package]]
 name = "cle"
-version = "9.2.8"
+version = "9.2.10"
 description = "|"
 category = "main"
 optional = false
@@ -156,7 +156,7 @@ python-versions = ">=3.8"
 [package.dependencies]
 pefile = "*"
 pyelftools = ">=0.27"
-pyvex = "9.2.8"
+pyvex = "9.2.10"
 sortedcontainers = ">=2.0"
 
 [package.extras]
@@ -545,14 +545,15 @@ test = ["appdirs (==1.4.4)", "pytest-cov (>=2.7)", "pytest-mock (>=3.6)", "pytes
 
 [[package]]
 name = "pluggy"
-version = "0.13.1"
+version = "1.0.0"
 description = "plugin and hook calling mechanisms for python"
 category = "dev"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+python-versions = ">=3.6"
 
 [package.extras]
 dev = ["pre-commit", "tox"]
+testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "plumbum"
@@ -683,7 +684,7 @@ lxml = ">=2.1"
 
 [[package]]
 name = "pysmt"
-version = "0.9.6.dev14"
+version = "0.9.6.dev21"
 description = "A solver-agnostic library for SMT Formulae manipulation and solving"
 category = "main"
 optional = false
@@ -744,14 +745,14 @@ python-versions = "*"
 
 [[package]]
 name = "pyvex"
-version = "9.2.8"
+version = "9.2.10"
 description = "A Python interface to libVEX and VEX IR"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [package.dependencies]
-archinfo = "9.2.8"
+archinfo = "9.2.10"
 bitstring = "*"
 cffi = {version = ">=1.0.3", markers = "implementation_name == \"cpython\""}
 
@@ -820,7 +821,7 @@ scipy = ">=1.0"
 
 [[package]]
 name = "setuptools-scm"
-version = "7.0.4"
+version = "7.0.5"
 description = "the blessed package to manage your versions by scm tags"
 category = "main"
 optional = false
@@ -887,6 +888,14 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "tree-sitter"
+version = "0.20.0"
+description = "Python bindings to the Tree-sitter parsing library"
+category = "main"
+optional = false
+python-versions = ">=3.3"
+
+[[package]]
 name = "typer"
 version = "0.4.2"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
@@ -939,7 +948,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
 [[package]]
 name = "z3-solver"
-version = "4.8.17.0"
+version = "4.9.1.0"
 description = "an efficient SMT solver library"
 category = "main"
 optional = false
@@ -948,27 +957,13 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "4ee9e5e99152a2043ae6401424e40b06de15bf9ebba2771f73ba3216d63095b9"
+content-hash = "606efa581d6b9c59853db4f6d90b738dae89c7ff043b96618ee748881ad39d43"
 
 [metadata.files]
-ailment = [
-    {file = "ailment-9.2.8-py3-none-any.whl", hash = "sha256:866279d9714101b69058bb71be3aa4a93a041220bd6aa06ea7abcdb3172dc365"},
-    {file = "ailment-9.2.8.tar.gz", hash = "sha256:30a4ee4ab9876b0972e209ea9602a3bc2a9f526098ac88c9ae15338e8b6fb36f"},
-]
-angr = [
-    {file = "angr-9.2.8-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:7850f7cc4c7d7df25d157c302974a01b96f836ad2256e04129889cbde957400f"},
-    {file = "angr-9.2.8-py3-none-manylinux2014_x86_64.whl", hash = "sha256:eff4437faaf77c0b925e78c215b65212a319c4846a081cb2ff19e7f5633161b9"},
-    {file = "angr-9.2.8-py3-none-win_amd64.whl", hash = "sha256:8099d0d4ca53104b66c239138cb798a73dea4425e0eaeb28fb8cf692f85fc994"},
-    {file = "angr-9.2.8.tar.gz", hash = "sha256:cfdd7a72328f233a71c823a5c61887d58d1c7acf77804164d74bde7a9287a396"},
-]
-archinfo = [
-    {file = "archinfo-9.2.8-py3-none-any.whl", hash = "sha256:c1390ef771ed29e30d3c7c23031eb08499c9a589cbaa50bc42d51500bee50561"},
-    {file = "archinfo-9.2.8.tar.gz", hash = "sha256:292fd5733d3bdfcddb772564e5dae78a8b02e23674d34f535f9c7a97680919a7"},
-]
-atomicwrites = [
-    {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
-    {file = "atomicwrites-1.4.0.tar.gz", hash = "sha256:ae70396ad1a434f9c7046fd2dd196fc04b12f9e91ffb859164193be8b6168a7a"},
-]
+ailment = []
+angr = []
+archinfo = []
+atomicwrites = []
 attrs = [
     {file = "attrs-21.4.0-py2.py3-none-any.whl", hash = "sha256:2d27e3784d7a565d36ab851fe94887c5eccd6a463168875832a1be79c82828b4"},
     {file = "attrs-21.4.0.tar.gz", hash = "sha256:626ba8234211db98e869df76230a137c4c40a12d72445c45d5f5b716f076e2fd"},
@@ -1083,14 +1078,8 @@ cffi = [
     {file = "cffi-1.15.1-cp39-cp39-win_amd64.whl", hash = "sha256:70df4e3b545a17496c9b3f41f5115e69a4f2e77e94e1d2a8e1070bc0c38c8a3c"},
     {file = "cffi-1.15.1.tar.gz", hash = "sha256:d400bfb9a37b1351253cb402671cea7e89bdecc294e8016a707f6d1d8ac934f9"},
 ]
-claripy = [
-    {file = "claripy-9.2.8-py3-none-any.whl", hash = "sha256:f385475ea147052d676c539c51e6d877c0fbd7d8345522ae98450f06b17d8d44"},
-    {file = "claripy-9.2.8.tar.gz", hash = "sha256:31435643262aaf6548bcda90497d46e2a0da16bea813d6386f71ca3d979e450c"},
-]
-cle = [
-    {file = "cle-9.2.8-py3-none-any.whl", hash = "sha256:19f14d850f47befa143b39b0b031d5050dfa8fb72b6553c6cb9712d3ac2e76ef"},
-    {file = "cle-9.2.8.tar.gz", hash = "sha256:3f1154084dbfe2d182f07ddb9eee986da2d3fa79299db3979d33560ba46c7400"},
-]
+claripy = []
+cle = []
 click = [
     {file = "click-8.1.3-py3-none-any.whl", hash = "sha256:bb4d8133cb15a609f44e8213d9b391b0809795062913b383c62be0ee95b1db48"},
     {file = "click-8.1.3.tar.gz", hash = "sha256:7682dc8afb30297001674575ea00d1814d808d6a36af415a82bd481d37ba7b8e"},
@@ -1202,10 +1191,7 @@ platformdirs = [
     {file = "platformdirs-2.5.2-py3-none-any.whl", hash = "sha256:027d8e83a2d7de06bbac4e5ef7e023c02b863d7ea5d079477e722bb41ab25788"},
     {file = "platformdirs-2.5.2.tar.gz", hash = "sha256:58c8abb07dcb441e6ee4b11d8df0ac856038f944ab98b7be6b27b2a3c7feef19"},
 ]
-pluggy = [
-    {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},
-    {file = "pluggy-0.13.1.tar.gz", hash = "sha256:15b2acde666561e1298d71b523007ed7364de07029219b604cf808bfa1c765b0"},
-]
+pluggy = []
 plumbum = [
     {file = "plumbum-1.7.2-py2.py3-none-any.whl", hash = "sha256:0bbf431e31da988405de2fb36c3226f09c0c9cdf69c8480f8997f4b94b7370a1"},
     {file = "plumbum-1.7.2.tar.gz", hash = "sha256:0d1bf908076bbd0484d16412479cb97d6843069ee19f99e267e11dd980040523"},
@@ -1290,10 +1276,7 @@ pyparsing = [
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
 ]
 pyquery = []
-pysmt = [
-    {file = "PySMT-0.9.6.dev14-py2.py3-none-any.whl", hash = "sha256:e285c4f07b4751c8c68753345eb08abbf7c9fad6e9a3bdccc5c11d4434899992"},
-    {file = "PySMT-0.9.6.dev14.tar.gz", hash = "sha256:c810c1ab09f326d2762df7f415250705a4eb423a3879f2622736d7c6aa624b24"},
-]
+pysmt = []
 pytest = [
     {file = "pytest-7.1.2-py3-none-any.whl", hash = "sha256:13d0e3ccfc2b6e26be000cb6568c832ba67ba32e719443bfe725814d3c42433c"},
     {file = "pytest-7.1.2.tar.gz", hash = "sha256:a06a0425453864a270bc45e71f783330a7428defb4230fb5e6a731fde06ecd45"},
@@ -1304,12 +1287,7 @@ python-utils = [
     {file = "python_utils-3.3.3-py2.py3-none-any.whl", hash = "sha256:5cb9cf295018202fb4d6abdd694a33a7f08bc0ce1bf1eab8cce80ab2cde35c07"},
 ]
 pytz = []
-pyvex = [
-    {file = "pyvex-9.2.8-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:7f6b9bc4837f2779cbdba9a0ef7c8e60ed2db98e078b25289c04133f1c1bdcd9"},
-    {file = "pyvex-9.2.8-py3-none-manylinux2014_x86_64.whl", hash = "sha256:956b931f950a437495ed435ef4e426aa5049e5474e55cfa475bb2bfddc11da35"},
-    {file = "pyvex-9.2.8-py3-none-win_amd64.whl", hash = "sha256:cb771462278fe09d547241ae48d1ce9b4ec1d7ebcd00022ce7d46c15f6733ec8"},
-    {file = "pyvex-9.2.8.tar.gz", hash = "sha256:187558f95d7c3b094d23569001008b99e87967d7db4f9726f9b87d28063f8241"},
-]
+pyvex = []
 pywin32 = [
     {file = "pywin32-304-cp310-cp310-win32.whl", hash = "sha256:3c7bacf5e24298c86314f03fa20e16558a4e4138fc34615d7de4070c23e65af3"},
     {file = "pywin32-304-cp310-cp310-win_amd64.whl", hash = "sha256:4f32145913a2447736dad62495199a8e280a77a0ca662daa2332acf849f0be48"},
@@ -1354,6 +1332,10 @@ tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
+tree-sitter = [
+    {file = "tree_sitter-0.20.0-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:51a609a7c1bd9d9e75d92ee128c12c7852ae70a482900fbbccf3d13a79e0378c"},
+    {file = "tree_sitter-0.20.0.tar.gz", hash = "sha256:1940f64be1e8c9c3c0e34a2258f1e4c324207534d5b1eefc5ab2960a9d98f668"},
+]
 typer = []
 typing-extensions = [
     {file = "typing_extensions-4.3.0-py3-none-any.whl", hash = "sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02"},
@@ -1371,10 +1353,4 @@ wcwidth = [
     {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
 ]
 wrapt = []
-z3-solver = [
-    {file = "z3-solver-4.8.17.0.tar.gz", hash = "sha256:67abd61898039d6c8c07196949d2962f461402b670a137b2347a65c3c1890f73"},
-    {file = "z3_solver-4.8.17.0-py2.py3-none-macosx_10_16_x86_64.whl", hash = "sha256:db526f27c1dce8c3c1f0b4eaebae0e9f3ab9bc0940578af8f9923c1fc22aa6e0"},
-    {file = "z3_solver-4.8.17.0-py2.py3-none-manylinux1_x86_64.whl", hash = "sha256:00efe464e61fdcdb1d1b7821269ff2449817ae1a5f3a4cb9b47640a82f109eb2"},
-    {file = "z3_solver-4.8.17.0-py2.py3-none-win32.whl", hash = "sha256:f1b2a10befac07b44bc4388b7ac9a01d72b82c6c424bc9607b4b13c3616d90f4"},
-    {file = "z3_solver-4.8.17.0-py2.py3-none-win_amd64.whl", hash = "sha256:72284c94b5310724c38202776873788e46213237aecbe2882bad61b4c9739826"},
-]
+z3-solver = []
