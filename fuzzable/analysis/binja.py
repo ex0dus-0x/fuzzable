@@ -207,8 +207,7 @@ class BinjaAnalysis(
 
         return depth
 
-    @staticmethod
-    def contains_loop(target: Function) -> bool:
+    def contains_loop(self, target: Function) -> bool:
         return any([bb in bb.dominance_frontier for bb in target.basic_blocks])
 
     def get_cyclomatic_complexity(self) -> int:

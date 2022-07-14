@@ -4,9 +4,14 @@ __main__.py
 
     Command line entry point for launching the standalone CLI executable.
 """
-import logging
+import sys
 import typing as t
 import typer
+import lief
+
+from rich import print
+from rich.console import Console
+from rich.table import Table
 
 from fuzzable import generate
 from fuzzable.analysis import AnalysisBackend, AnalysisMode
@@ -21,6 +26,16 @@ SOURCE_FILE_EXTS = [".c", ".cpp", ".cc", ".h", ".hpp"]
 app = typer.Typer(
     help="Framework for Automating Fuzzable Target Discovery with Static Analysis"
 )
+
+
+def error(string: str) -> None:
+    exception = typer.style(
+        string,
+        fg=typer.colors.WHITE,
+        bg=typer.colors.RED,
+    )
+    typer.echo(exception)
+    sys.exit(1)
 
 
 @app.command()
@@ -46,28 +61,17 @@ def analyze(
     try:
         mode = AnalysisMode[mode.upper()]
     except Exception:
-        exception = typer.style(
-            "Analysis mode must either be `recommend` or `rank`.",
-            fg=typer.colors.WHITE,
-            bg=typer.colors.RED,
-        )
-        typer.echo(exception)
         return None
 
     if target.is_file():
-        run_on_file(target, mode)
+        run_on_file(target, mode, out_csv)
     elif target.is_dir():
-        run_on_workspace(target, mode)
+        run_on_workspace(target, mode, out_csv)
     else:
-        exception = typer.style(
-            "Target path does not exist",
-            fg=typer.colors.WHITE,
-            bg=typer.colors.RED,
-        )
-        typer.echo(exception)
+        error(f"Target path `{target}` does not exist")
 
 
-def run_on_file(target: Path, mode: AnalysisMode) -> None:
+def run_on_file(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> None:
     """Runs analysis on a single source code file or binary file."""
     analyzer: t.TypeVar[AnalysisBackend]
     if target.suffix in SOURCE_FILE_EXTS:
@@ -86,28 +90,39 @@ def run_on_file(target: Path, mode: AnalysisMode) -> None:
 
         # didn't work, try to load angr as a fallback instead
         # TODO: angr support
-        except Exception as err:
+        except Exception:
             import angr
 
             typer.echo(
-                f"Cannot load Binary Ninja as a backend. Reason: {err}. Attempting to load angr instead."
+                f"Cannot load Binary Ninja as a backend. Attempting to load angr instead."
             )
             proj = angr.Project(target, load_options={"auto_load_libs": False})
             analyzer = AngrAnalysis(proj, mode)
         else:
-            exception = typer.style(
-                "Unsupported file type. Must be either a binary or a C/C++ source",
-                fg=typer.colors.WHITE,
-                bg=typer.colors.RED,
+            error(
+                f"Unsupported file type `{target.suffix}`. Must be either a binary or a C/C++ source"
             )
-            typer.echo(exception)
 
     typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
-    fuzzability = analyzer.run()
-    print(fuzzability)
+    #fuzzability = analyzer.run()
+    #print(fuzzability)
+
+    table = Table(title=f"Fuzzable Report for Target `{target}`")
+
+    table.add_column("Rank", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Function Signature", style="magenta")
+    table.add_column("Fuzzability Score", justify="right", style="green")
+
+    table.add_row("Dec 20, 2019", "Star Wars: The Rise of Skywalker", "$952,110,690")
+    table.add_row("May 25, 2018", "Solo: A Star Wars Story", "$393,151,347")
+    table.add_row("Dec 15, 2017", "Star Wars Ep. V111: The Last Jedi", "$1,332,539,889")
+    table.add_row("Dec 16, 2016", "Rogue One: A Star Wars Story", "$1,332,439,889")
+
+    console = Console()
+    console.print(table)
 
 
-def run_on_workspace(target: Path, mode: AnalysisMode) -> None:
+def run_on_workspace(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> None:
     """
     Given a workspace, recursively iterate and parse out all of the source code files
     that are present. This is not currently supported on workspaces of binaries/libraries.
@@ -118,13 +133,9 @@ def run_on_workspace(target: Path, mode: AnalysisMode) -> None:
             source_files += [file]
 
     if len(source_files) == 0:
-        exception = typer.style(
-            "No C/C++ source code found in the workspace. fuzzable currently does not support parsing on workspaces with multiple binaries.",
-            fg=typer.colors.WHITE,
-            bg=typer.colors.RED,
+        error(
+            "No C/C++ source code found in the workspace. fuzzable currently does not support parsing on workspaces with multiple binaries."
         )
-        typer.echo(exception)
-        return
 
     analyzer = AstAnalysis(source_files, mode)
     typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
@@ -135,8 +146,11 @@ def run_on_workspace(target: Path, mode: AnalysisMode) -> None:
 @app.command()
 def create_harness(
     target: Path,
-    symbol_name: str = typer.Option(
-        "", help="Name of function symbol to create a fuzzing harness to target."
+    symbol_name: t.List[str] = typer.Option(
+        [], help="Names of function symbol to create a fuzzing harness to target."
+    ),
+    out_so_name: str = typer.Option(
+        "", help="Specify to set output `.so` of a transformed ELF binary."
     ),
     file_fuzzing: bool = typer.Option(
         False,
@@ -151,7 +165,10 @@ def create_harness(
 
     # if a binary, check if executable or library. if executable, use LIEF to
     # copy, export the symbol and transform to shared object.
+    binary = lief.parse(target)
+    if binary is not None:
+        output = generate.transform_elf_to_so(target, binary, symbol_name, out_so_name)
 
     # if source code, use the generic library
-
+    generate.generate_harness(target, file_fuzzing, libfuzzer)
     print(target, symbol_name)

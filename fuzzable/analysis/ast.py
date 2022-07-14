@@ -57,7 +57,7 @@ class AstAnalysis(AnalysisBackend):
         for func in self.parsed_symbols:
             if self.skip_analysis(func):
                 continue
-    
+
             # if recommend mode, filter and run only those that are top-level
             if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
                 continue
@@ -110,6 +110,9 @@ class AstAnalysis(AnalysisBackend):
         return False
 
     def risky_sinks(self, func: t.Any) -> int:
+        """
+        Parse the parameter list
+        """
         pass
 
     def get_coverage_depth(self, func: t.Any) -> int:

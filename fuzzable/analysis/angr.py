@@ -5,10 +5,10 @@ angr.py
 """
 import typing as t
 
-from angr.analyses.cfg.cfg_fast import CFGFast
+from angr.knowledge_plugins.functions.function import Function
 
 from . import AnalysisBackend, AnalysisMode, Fuzzability
-from ..metrics import CallScore, CoverageReport
+from ..metrics import CallScore
 
 
 class AngrAnalysis(AnalysisBackend):
@@ -25,10 +25,7 @@ class AngrAnalysis(AnalysisBackend):
                 continue
 
             # if recommend mode, filter and run only those that are top-level
-            if (
-                self.mode == AnalysisMode.RECOMMEND
-                and not AngrAnalysis.is_toplevel_call(func)
-            ):
+            if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
                 continue
 
             score = self.analyze_call(name, func)
@@ -72,10 +69,14 @@ class AngrAnalysis(AnalysisBackend):
         return False
 
     def is_toplevel_call(self, target: t.Any) -> bool:
-        pass
+        program_rda = self.target.analyses.ReachingDefinitions(
+            subject=target,
+        )
+        print(program_rda.all_definitions)
 
-    def risky_sinks(self, func: t.Any) -> int:
-        pass
+    def risky_sinks(self, func: Function) -> int:
+        calls_reached = func.functions_called
+        return calls_reached
 
     def get_coverage_depth(self, func: t.Any) -> int:
         pass
