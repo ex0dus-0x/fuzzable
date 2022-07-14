@@ -55,7 +55,7 @@ int LoadLibrary(void)
     return handle != NULL;
 }
 
-extern uint8_t fuzzBuffer[FUZZER_BUF];
+static uint8_t fuzzBuffer[FUZZER_BUF];
 
 #ifdef LIBFUZZER
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size)

@@ -44,10 +44,10 @@ class AngrAnalysis(AnalysisBackend):
 
         return CallScore(
             name=name,
-            toplevel=AngrAnalysis.is_toplevel_call(func),
+            toplevel=self.is_toplevel_call(func),
             fuzz_friendly=fuzz_friendly,
             risky_sinks=self.risky_sinks(func),
-            contains_loop=AngrAnalysis.contains_loop(func),
+            contains_loop=self.contains_loop(func),
             coverage_depth=self.get_coverage_depth(func),
             stripped=stripped,
         )
@@ -72,22 +72,32 @@ class AngrAnalysis(AnalysisBackend):
         program_rda = self.target.analyses.ReachingDefinitions(
             subject=target,
         )
-        print(program_rda.all_definitions)
+        return len(program_rda.all_definitions) == 0
 
     def risky_sinks(self, func: Function) -> int:
         calls_reached = func.functions_called
         return calls_reached
 
-    def get_coverage_depth(self, func: t.Any) -> int:
-        pass
-
-    def contains_loop(self, func: t.Any) -> bool:
-        pass
+    def get_coverage_depth(self, func: Function) -> int:
+        """
+        """
+        calls_reached = func.functions_called
+        callsites =  [calls_reached]
+        while callsites:
+            to_check = callsites.pop()
+            
+    def contains_loop(self, func: Function) -> bool:
+        """
+        TODO
+        """
+        return False
 
     def get_cyclomatic_complexity(self) -> int:
         """
         HEURISTIC
 
         M = E − N + 2P
+
+        TODO
         """
-        pass
+        return 0

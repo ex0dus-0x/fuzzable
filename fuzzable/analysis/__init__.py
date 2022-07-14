@@ -9,24 +9,7 @@ import skcriteria as skc
 from collections import OrderedDict
 
 from ..metrics import CallScore
-
-# Interesting symbol name patterns to check for fuzzable
-INTERESTING_PATTERNS: t.List[str] = [
-    "Parse",
-    "Read",
-    "Buf",
-    "File",
-    "Input",
-    "String",
-    "Decode",
-]
-
-# TODO: dataset of risky function calls
-RISKY_GLIBC_CALL_PATTERNS: t.List[str] = [
-    "cmp",
-    "cpy",
-    "free",
-]
+from ..config import INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
 
 # Type sig for a finalized list
 Fuzzability = t.OrderedDict[str, CallScore]

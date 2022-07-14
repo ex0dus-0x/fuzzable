@@ -45,6 +45,7 @@ def generate_harness(
     with open(Path("templates" / "linux_closed_source_harness.cpp"), "r") as fd:
         template = fd.read()
 
+    template = template.replace("{NAME}", target)
     template = template.replace("{binary}", target)
     template = template.replace("{type_arg}", target)
 

@@ -4,39 +4,23 @@ __main__.py
 
     Command line entry point for launching the standalone CLI executable.
 """
-import sys
 import typing as t
 import typer
 import lief
 
 from rich import print
-from rich.console import Console
-from rich.table import Table
-
 from fuzzable import generate
+from fuzzable.config import SOURCE_FILE_EXTS
+from fuzzable.cli import print_table, error
 from fuzzable.analysis import AnalysisBackend, AnalysisMode
 from fuzzable.analysis.ast import AstAnalysis
 from fuzzable.analysis.angr import AngrAnalysis
 
 from pathlib import Path
 
-# Supported source code paths
-SOURCE_FILE_EXTS = [".c", ".cpp", ".cc", ".h", ".hpp"]
-
 app = typer.Typer(
     help="Framework for Automating Fuzzable Target Discovery with Static Analysis"
 )
-
-
-def error(string: str) -> None:
-    exception = typer.style(
-        string,
-        fg=typer.colors.WHITE,
-        bg=typer.colors.RED,
-    )
-    typer.echo(exception)
-    sys.exit(1)
-
 
 @app.command()
 def analyze(
@@ -104,22 +88,7 @@ def run_on_file(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> 
             )
 
     typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
-    #fuzzability = analyzer.run()
-    #print(fuzzability)
-
-    table = Table(title=f"Fuzzable Report for Target `{target}`")
-
-    table.add_column("Rank", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Function Signature", style="magenta")
-    table.add_column("Fuzzability Score", justify="right", style="green")
-
-    table.add_row("Dec 20, 2019", "Star Wars: The Rise of Skywalker", "$952,110,690")
-    table.add_row("May 25, 2018", "Solo: A Star Wars Story", "$393,151,347")
-    table.add_row("Dec 15, 2017", "Star Wars Ep. V111: The Last Jedi", "$1,332,539,889")
-    table.add_row("Dec 16, 2016", "Rogue One: A Star Wars Story", "$1,332,439,889")
-
-    console = Console()
-    console.print(table)
+    print_table(target, analyzer.run())
 
 
 def run_on_workspace(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> None:
@@ -139,8 +108,7 @@ def run_on_workspace(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]
 
     analyzer = AstAnalysis(source_files, mode)
     typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
-    fuzzability = analyzer.run()
-    print(fuzzability)
+    print_table(target, analyzer.run())
 
 
 @app.command()
