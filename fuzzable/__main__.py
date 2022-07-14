@@ -22,6 +22,7 @@ app = typer.Typer(
     help="Framework for Automating Fuzzable Target Discovery with Static Analysis"
 )
 
+
 @app.command()
 def analyze(
     target: Path,
@@ -73,25 +74,27 @@ def run_on_file(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> 
             analyzer = BinjaAnalysis(bv, mode, headless=True)
 
         # didn't work, try to load angr as a fallback instead
-        # TODO: angr support
         except Exception:
             import angr
 
             typer.echo(
                 f"Cannot load Binary Ninja as a backend. Attempting to load angr instead."
             )
-            proj = angr.Project(target, load_options={"auto_load_libs": False})
-            analyzer = AngrAnalysis(proj, mode)
-        else:
-            error(
-                f"Unsupported file type `{target.suffix}`. Must be either a binary or a C/C++ source"
-            )
+            try:
+                proj = angr.Project(target, load_options={"auto_load_libs": False})
+                analyzer = AngrAnalysis(proj, mode)
+            except Exception:
+                error(
+                    f"Unsupported file type `{target.suffix}`. Must be either a binary or a C/C++ source"
+                )
 
     typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
     print_table(target, analyzer.run())
 
 
-def run_on_workspace(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> None:
+def run_on_workspace(
+    target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]
+) -> None:
     """
     Given a workspace, recursively iterate and parse out all of the source code files
     that are present. This is not currently supported on workspaces of binaries/libraries.
@@ -140,3 +143,8 @@ def create_harness(
     # if source code, use the generic library
     generate.generate_harness(target, file_fuzzing, libfuzzer)
     print(target, symbol_name)
+
+
+# TOOD list-functions
+# TODO generate-callgraph
+# TODO reference-cve

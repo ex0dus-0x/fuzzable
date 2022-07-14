@@ -19,13 +19,14 @@ ERROR_START = typer.style(
     bg=typer.colors.RED,
 )
 
+
 def error(string: str) -> None:
     """Pretty-prints an error message and exits"""
     exception = typer.style(
         string,
         fg=typer.colors.RED,
     )
-    typer.echo(f"{ERROR_START}: {exception}")
+    typer.echo(f"{ERROR_START} {exception}")
     sys.exit(1)
 
 
@@ -41,7 +42,6 @@ def print_table(target: Path, fuzzability: Fuzzability) -> None:
     table.add_column("Natural Loops?", style="green")
     table.add_column("Cyclomatic Complexity", style="green")
     table.add_column("Coverage Depth", style="green")
-
 
     table.add_row("Dec 20, 2019", "Star Wars: The Rise of Skywalker", "$952,110,690")
     table.add_row("May 25, 2018", "Solo: A Star Wars Story", "$393,151,347")

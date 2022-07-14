@@ -4,7 +4,9 @@ import enum
 import typing as t
 
 import pandas as pd
-import skcriteria as skc
+
+from skcriteria.data import Data
+from skcriteria.madm import simple
 
 from collections import OrderedDict
 
@@ -59,7 +61,15 @@ class AnalysisBackend(abc.ABC):
         """
         fuzzability = OrderedDict()
         unranked_df = pd.json_normalize(dataclasses.asdict(obj) for obj in unranked)
-        return fuzzability
+        criteria_data = data(
+            unranked_df,
+            [MAX, MAX, MAX, MAX, MAX],
+            anames=function_names,
+            cnames=function_names,
+        )
+        dm = simple.WeightedSum(mnorm="sum")
+        dec = dm.decide(criteria_data)
+        return dec.asdict()
 
     @abc.abstractmethod
     def analyze_call(self, name: str, func: t.Any) -> CallScore:

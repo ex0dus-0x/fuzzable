@@ -4,6 +4,7 @@ config.py
     Defines configuration knobs that can be universally configured by
     any fuzzable client
 """
+import typing as t
 
 # Supported source code paths
 SOURCE_FILE_EXTS = [".c", ".cpp", ".cc", ".h", ".hpp"]
