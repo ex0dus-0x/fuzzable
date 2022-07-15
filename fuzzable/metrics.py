@@ -44,6 +44,15 @@ class CallScore:
     coverage_depth: int
 
     @property
+    def matrix_row(self) -> t.List[int]:
+        return [
+            int(self.fuzz_friendly),
+            int(self.risky_sinks),
+            int(self.contains_loop),
+            int(self.coverage_depth),
+        ]
+
+    @property
     def table_row(self) -> str:
         """Output as a markdown/ascii table row when displaying back to user"""
         return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.contains_loop} | {self.recursive} | \n"

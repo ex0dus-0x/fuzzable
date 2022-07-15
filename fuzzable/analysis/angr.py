@@ -75,18 +75,20 @@ class AngrAnalysis(AnalysisBackend):
         return len(program_rda.all_definitions) == 0
 
     def risky_sinks(self, func: Function) -> int:
-        calls_reached = func.functions_called
+        calls_reached = func.functions_called()
         for call in calls_reached:
-            pass
+            print(call)
 
         return len(calls_reached)
 
     def get_coverage_depth(self, func: Function) -> int:
         """ """
-        calls_reached = func.functions_called
+        calls_reached = func.functions_called()
         callsites = [calls_reached]
         while callsites:
             to_check = callsites.pop()
+
+        return 0
 
     def contains_loop(self, func: Function) -> bool:
         """

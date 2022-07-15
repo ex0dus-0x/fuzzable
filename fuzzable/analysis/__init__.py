@@ -2,10 +2,8 @@ import abc
 import dataclasses
 import enum
 import typing as t
+import skcriteria as skc
 
-import pandas as pd
-
-from skcriteria.data import Data
 from skcriteria.madm import simple
 
 from collections import OrderedDict
@@ -55,21 +53,38 @@ class AnalysisBackend(abc.ABC):
 
     def _rank_fuzzability(self, unranked: t.List[CallScore]) -> Fuzzability:
         """
-        After analyzing each function call, rank based on the call score
+        After analyzing each function call, use scikit-criteria to rank based on the call score.
 
         This should be the tail call for run, as it produces the finalized results
         """
-        fuzzability = OrderedDict()
-        unranked_df = pd.json_normalize(dataclasses.asdict(obj) for obj in unranked)
-        criteria_data = data(
-            unranked_df,
-            [MAX, MAX, MAX, MAX, MAX],
-            anames=function_names,
-            cnames=function_names,
+        matrix = [score.matrix_row for score in unranked]
+        names = [score.name for score in unranked]
+
+        objectives = [max, max, max, max]
+        dm = skc.mkdm(
+            matrix,
+            objectives,
+            alternatives=names,
+            criteria=[
+                "fuzz_friendly",
+                "sinks",
+                "loop",
+                "coverage",
+            ],
         )
-        dm = simple.WeightedSum(mnorm="sum")
-        dec = dm.decide(criteria_data)
-        return dec.asdict()
+
+        dec = simple.WeightedSumModel()
+        rank = dec.evaluate(dm)
+
+        fuzzability_scores = rank.e_.score
+        ranks = rank.rank_
+
+        # TODO make this better
+        results = [y for x, y in sorted(zip(ranks, fuzzability_scores))] 
+        for name, entry in zip(rank.alternatives, results):
+            entry["name"] = name
+
+        return results
 
     @abc.abstractmethod
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
