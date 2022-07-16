@@ -1,5 +1,4 @@
 import abc
-import dataclasses
 import enum
 import typing as t
 import skcriteria as skc
@@ -53,14 +52,15 @@ class AnalysisBackend(abc.ABC):
 
     def _rank_fuzzability(self, unranked: t.List[CallScore]) -> Fuzzability:
         """
-        After analyzing each function call, use scikit-criteria to rank based on the call score.
+        After analyzing each function call, use scikit-criteria to rank based on the call score
+        using a simple weighted-sum model.
 
         This should be the tail call for run, as it produces the finalized results
         """
         matrix = [score.matrix_row for score in unranked]
         names = [score.name for score in unranked]
 
-        objectives = [max, max, max, max]
+        objectives = [max, max, max, max, max]
         dm = skc.mkdm(
             matrix,
             objectives,
@@ -70,21 +70,27 @@ class AnalysisBackend(abc.ABC):
                 "sinks",
                 "loop",
                 "coverage",
+                "cyclomatic_complexity",
             ],
         )
 
         dec = simple.WeightedSumModel()
         rank = dec.evaluate(dm)
 
-        fuzzability_scores = rank.e_.score
-        ranks = rank.rank_
-
         # TODO make this better
-        results = [y for x, y in sorted(zip(ranks, fuzzability_scores))] 
-        for name, entry in zip(rank.alternatives, results):
-            entry["name"] = name
 
-        return results
+        # finalize CallScores by setting scores and ranks
+        scores = rank.e_.score
+        ranks = list(rank.rank_)
+        new_unranked = []
+        for rank, score, entry in zip(ranks, scores, unranked):
+            entry.rank = rank
+            entry.score = score
+            new_unranked += [entry]
+
+        # can sort our unranked list appropriately now
+        sorted_results = [y for _, y in sorted(zip(ranks, new_unranked))]
+        return sorted_results
 
     @abc.abstractmethod
     def analyze_call(self, name: str, func: t.Any) -> CallScore:

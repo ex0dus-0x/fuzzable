@@ -106,6 +106,7 @@ class BinjaAnalysis(
             risky_sinks=self.risky_sinks(func),
             contains_loop=BinjaAnalysis.contains_loop(func),
             coverage_depth=self.get_coverage_depth(func),
+            cyclomatic_complexity=self.get_cyclomatic_complexity(func)
             stripped=stripped,
         )
 

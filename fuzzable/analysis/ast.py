@@ -84,6 +84,7 @@ class AstAnalysis(AnalysisBackend):
             risky_sinks=self.risky_sinks(func),
             contains_loop=AstAnalysis.contains_loop(func),
             coverage_depth=self.get_coverage_depth(func),
+            cyclomatic_complexity=self.get_cyclomatic_complexity(func)
         )
 
     def skip_analysis(self, func: t.Any) -> bool:
@@ -121,7 +122,7 @@ class AstAnalysis(AnalysisBackend):
     def contains_loop(self, func: t.Any) -> bool:
         pass
 
-    def get_cyclomatic_complexity(self) -> int:
+    def get_cyclomatic_complexity(self, func: t.Any) -> int:
         """
         HEURISTIC
 

@@ -49,6 +49,7 @@ class AngrAnalysis(AnalysisBackend):
             risky_sinks=self.risky_sinks(func),
             contains_loop=self.contains_loop(func),
             coverage_depth=self.get_coverage_depth(func),
+            cyclomatic_complexity=self.get_cyclomatic_complexity(func),
             stripped=stripped,
         )
 
@@ -59,7 +60,7 @@ class AngrAnalysis(AnalysisBackend):
         if func.is_plt or func.is_syscall:
             return True
 
-        if name.startswith("_"):
+        if name.startswith("__"):
             return True
 
         # if set, ignore all stripped functions for faster analysis
@@ -96,7 +97,7 @@ class AngrAnalysis(AnalysisBackend):
         """
         return False
 
-    def get_cyclomatic_complexity(self) -> int:
+    def get_cyclomatic_complexity(self, func: Function) -> int:
         """
         HEURISTIC
 
