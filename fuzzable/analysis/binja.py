@@ -106,7 +106,7 @@ class BinjaAnalysis(
             risky_sinks=self.risky_sinks(func),
             contains_loop=BinjaAnalysis.contains_loop(func),
             coverage_depth=self.get_coverage_depth(func),
-            cyclomatic_complexity=self.get_cyclomatic_complexity(func)
+            cyclomatic_complexity=self.get_cyclomatic_complexity(func),
             stripped=stripped,
         )
 
@@ -123,8 +123,8 @@ class BinjaAnalysis(
             return True
 
         # ignore targets with patterns that denote some type of profiling instrumentation, ie stack canary
-        if name.startswith("_"):
-            log.log_debug(f"{name} is instrumentation, skipping")
+        if name.startswith("__"):
+            log.log_debug(f"{name} is potentially instrumentation, skipping")
             return True
 
         # if set, ignore all stripped functions for faster analysis
@@ -211,13 +211,13 @@ class BinjaAnalysis(
     def contains_loop(self, target: Function) -> bool:
         return any([bb in bb.dominance_frontier for bb in target.basic_blocks])
 
-    def get_cyclomatic_complexity(self) -> int:
+    def get_cyclomatic_complexity(self, func: Function) -> int:
         """
-        HEURISTIC
-
-        M = E − N + 2P
+        edges - blocks + 2
         """
-        pass
+        num_blocks = len(func.basic_blocks)
+        num_edges = sum([len(b.outgoing_edges) for b in func.basic_blocks])
+        return num_blocks - num_edges + 2
 
 
 def run_fuzzable_recommend(view) -> None:

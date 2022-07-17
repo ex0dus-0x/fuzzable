@@ -5,6 +5,7 @@ ast.py
 
 """
 import typing as t
+import functools
 
 from tree_sitter import Language, Node, Parser
 
@@ -18,20 +19,27 @@ class AstAnalysis(AnalysisBackend):
     """Derived class to support parsing C/C++ ASTs with pycparser"""
 
     def __init__(self, target: t.List[str], mode: AnalysisMode):
+        super().__init__(target, mode)
         Language.build_library(
             BUILD_PATH,
             ["third_party/tree-sitter-c", "third_party/tree-sitter-cpp"],
         )
         self.language = Language(BUILD_PATH, "c")
         self.parser = Parser()
-        super().__init__(target, mode)
+
+        # store mapping between filenames and their raw contents and function AST node
+        self.parsed_symbols: t.Dict[str, t.Tuple[Node, bytes]] = {}
 
     def __str__(self) -> str:
         return "tree-sitter"
 
     def run(self) -> Fuzzability:
-        for filename in self.target:
+        """
+        This runs on two passes:
+        """
 
+        # first collect ASTs for every function
+        for filename in self.target:
             # switch over language if different language detected
             if filename.suffix in [".cpp", ".cc", ".hpp", ".hh"]:
                 self.language = Language(BUILD_PATH, "cpp")
@@ -51,43 +59,54 @@ class AstAnalysis(AnalysisBackend):
             (function_definition) @capture
             """
             )
-            self.parsed_symbols += [query.captures(tree.root_node)]
+
+            # store mappings for the file
+            captures = [node for (node, _) in query.captures(tree.root_node)]
+            self.parsed_symbols[str(filename)] = (captures, contents)
 
         # now analyze each function_definition node
-        for func in self.parsed_symbols:
-            if self.skip_analysis(func):
-                continue
+        for filename, entry in self.parsed_symbols.items():
+            nodes = entry[0]
+            contents = entry[1]
+            for node in nodes:
+                if self.skip_analysis(node):
+                    continue
 
-            # if recommend mode, filter and run only those that are top-level
-            if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
-                continue
+                # if recommend mode, filter and run only those that are top-level
+                if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(
+                    node
+                ):
+                    continue
 
-            # get function name from the node
-            query = self.language.query(
+                # get function name from the node
+                query = self.language.query(
+                    """
+                (identifier) @capture
                 """
-            (identifier) @capture
-            """
-            )
-            name = query.captures(func)
-            score = [self.analyze_call(name, func)]
+                )
 
-            self.scores += [score]
+                # TODO make this query better, match more specifically
+                identifier = query.captures(node)[0][0]
+                name = contents[identifier.start_byte : identifier.end_byte].decode(
+                    "utf8"
+                )
+                self.scores += [self.analyze_call(name, node, contents)]
 
-        ranked = super()._rank_fuzzability(self.scores)
-        return ranked
+        return super()._rank_fuzzability(self.scores)
 
-    def analyze_call(self, name: str, func: Node) -> CallScore:
+    def analyze_call(self, name: str, func: Node, contents: bytes) -> CallScore:
         return CallScore(
             name=name,
-            toplevel=self.is_toplevel_call(func),
-            fuzz_friendly=AstAnalysis.is_fuzz_friendly(name),
-            risky_sinks=self.risky_sinks(func),
-            contains_loop=AstAnalysis.contains_loop(func),
+            toplevel=self.is_toplevel_call(name),
+            fuzz_friendly=self.is_fuzz_friendly(name),
+            risky_sinks=self.risky_sinks(func, contents),
+            contains_loop=self.contains_loop(func),
             coverage_depth=self.get_coverage_depth(func),
-            cyclomatic_complexity=self.get_cyclomatic_complexity(func)
+            cyclomatic_complexity=self.get_cyclomatic_complexity(func),
+            stripped=False,
         )
 
-    def skip_analysis(self, func: t.Any) -> bool:
+    def skip_analysis(self, func: Node) -> bool:
         """
         TODO
         - match on standard library calls
@@ -95,37 +114,136 @@ class AstAnalysis(AnalysisBackend):
         """
         return False
 
-    def is_toplevel_call(self, target: t.Any) -> bool:
+    def is_toplevel_call(self, target: str) -> bool:
         """
-        TODO
-        - check if node is a callee of any other nodes cached currently
+        Check if node is a callee of any other function nodes, and if not is considered
+        a top level call
+
+        TODO: can this be more performant and pythonic?
         """
-        for node in self.parsed_symbols:
+
+        # get call_expressions for each function name
+        for _, entry in self.parsed_symbols.items():
+            nodes = entry[0]
+            contents = entry[1]
+            for node in nodes:
+                query = self.language.query(
+                    """
+                (call_expression) @capture
+                """
+                )
+
+                # get captured nodes and retrieve name for calls, determine if our current
+                # target is a top-level call
+                captures = [n for (n, _) in query.captures(node)]
+                for capture in captures:
+                    call_name = contents[capture.start_byte : capture.end_byte].decode(
+                        "utf8"
+                    )
+                    if call_name == target:
+                        return False
+
+        return True
+
+    def risky_sinks(self, func: Node, contents: bytes) -> int:
+        """
+        Parse the parameter list of the function AST, grab the callees, and
+        check to see if the parameters flow into risky callees.
+
+        TODO: this dataflow analysis is quite rudimentary and doesn't account
+        for reassignments
+        """
+
+        # number of times an argument flows into a risky call
+        instances = 0
+
+        # grab the parameter list and parse the parameters on our own
+        query = self.language.query(
+            """
+        (parameter_list) @capture
+        """
+        )
+        capture = [n for (n, _) in query.captures(func)][0]
+        param_list = contents[capture.start_byte + 1 : capture.end_byte - 1].decode(
+            "utf8"
+        )
+
+        # recover only the param name
+        # TODO: include types
+        params = param_list.split(",")
+        params = [p.split(" ")[1] for p in params]
+
+        # TODO: should we add a configuration knob that supports just checking
+        # for risky calls even if no arguments flow through them?
+        if len(params) == 0:
+            return instances
+
+        # now get all callees in the function and check if parameters flow into them
+        query = self.language.query(
+            """
+        (call_expression) @capture
+        """
+        )
+        captures = [n for (n, _) in query.captures(func)]
+        for callee in captures:
+            call_name = contents[callee.start_byte : callee.end_byte].decode("utf8")
+            if not AstAnalysis._is_risky_call(call_name):
+                continue
+
+            # grab and parse the argument list
             query = self.language.query(
                 """
-            (function_definition) @capture
+            (argument_list) @capture
             """
             )
-            query.captures(node)
+            capture = [n for (n, _) in query.captures(callee)][0]
+            arg_list = contents[capture.start_byte + 1 : capture.end_byte - 1].decode(
+                "utf8"
+            )
+            args = arg_list.split(",")
 
-        return False
+            # this should be unreachable
+            if len(args) == 0:
+                continue
 
-    def risky_sinks(self, func: t.Any) -> int:
-        """
-        Parse the parameter list
-        """
-        pass
+            param_flows_to_arg = all(item in args for item in params)
+            if param_flows_to_arg:
+                instances += 1
+
+        return instances
 
     def get_coverage_depth(self, func: t.Any) -> int:
-        pass
+        return 1
 
     def contains_loop(self, func: t.Any) -> bool:
-        pass
+        return True
 
     def get_cyclomatic_complexity(self, func: t.Any) -> int:
         """
-        HEURISTIC
-
         M = E − N + 2P
         """
-        pass
+        return self._visit_node(func)
+
+    def _visit_node(self, node: Node) -> int:
+        count = 0
+        branching_nodes = [
+            "if_statement",
+            "case_statement",
+            "do_statement",
+            "for_range_loop",
+            "for_statement",
+            "goto_statement",
+            "function_declarator",
+            "pointer_declarator",
+            "struct_specifier",
+            "preproc_elif",
+            "while_statement",
+            "switch_statement",
+            "&&",
+            "||",
+        ]
+        if node.type in branching_nodes:
+            count += 1
+        for child in node.children:
+            count += self._visit_node(child)
+        return count

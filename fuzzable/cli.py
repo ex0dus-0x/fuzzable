@@ -19,6 +19,17 @@ ERROR_START = typer.style(
     bg=typer.colors.RED,
 )
 
+COLUMNS = [
+    "Function Signature",
+    # "Location",
+    "Fuzzability Score",
+    "Fuzz-Friendly Name?",
+    "Risky Data Sinks?",
+    "Natural Loops?",
+    "Cyclomatic Complexity",
+    "Coverage Depth",
+]
+
 
 def error(string: str) -> None:
     """Pretty-prints an error message and exits"""
@@ -34,14 +45,8 @@ def print_table(target: Path, fuzzability: Fuzzability) -> None:
     print("\n")
     table = Table(title=f"Fuzzable Report for Target `{target}`")
 
-    table.add_column("Function Signature", style="magenta")
-    # table.add_column("Location", style="magenta")
-    table.add_column("Fuzzability Score", style="green")
-    table.add_column("Fuzz-Friendly Name?", style="green")
-    table.add_column("Risky Data Sinks?", style="green")
-    table.add_column("Natural Loops?", style="green")
-    table.add_column("Cyclomatic Complexity", style="green")
-    table.add_column("Coverage Depth", style="green")
+    for column in COLUMNS:
+        table.add_column(column, style="magenta")
 
     for row in fuzzability:
         table.add_row(

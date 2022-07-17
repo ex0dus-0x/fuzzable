@@ -12,15 +12,15 @@ SOURCE_FILE_EXTS = [".c", ".cpp", ".cc", ".h", ".hpp"]
 # Interesting symbol name patterns to check for fuzzable
 INTERESTING_PATTERNS: t.List[str] = [
     # Consuming Inputs
-    "Parse",
-    "Read",
-    "Buf",
-    "File",
-    "Input",
-    "Str",
+    "parse",
+    "read",
+    "buf",
+    "file",
+    "input",
+    "str",
     # Decryption Routines
-    "Encode",
-    "Decode",
+    "encode",
+    "decode",
 ]
 
 # TODO: dataset of risky function calls

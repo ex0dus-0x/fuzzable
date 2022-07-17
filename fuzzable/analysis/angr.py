@@ -17,7 +17,6 @@ class AngrAnalysis(AnalysisBackend):
 
     def run(self) -> Fuzzability:
         cfg_fast = self.target.analyses.CFGFast()
-        analyzed = []
         for _, func in cfg_fast.functions.items():
             name = func.name
 
@@ -29,11 +28,11 @@ class AngrAnalysis(AnalysisBackend):
                 continue
 
             score = self.analyze_call(name, func)
-            analyzed += [score]
+            self.scores += [score]
 
-        return super()._rank_fuzzability(analyzed)
+        return super()._rank_fuzzability(self.scores)
 
-    def analyze_call(self, name: str, func: t.Any) -> CallScore:
+    def analyze_call(self, name: str, func: Function) -> CallScore:
         stripped = "sub_" in name
 
         # no need to check if no name available
@@ -53,7 +52,7 @@ class AngrAnalysis(AnalysisBackend):
             stripped=stripped,
         )
 
-    def skip_analysis(self, func: t.Any) -> bool:
+    def skip_analysis(self, func: Function) -> bool:
         name = func.name
 
         # ignore imported functions from other libraries, ie glibc or win32api

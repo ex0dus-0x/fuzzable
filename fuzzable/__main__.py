@@ -48,6 +48,8 @@ def analyze(
     except Exception:
         return None
 
+    typer.echo(f"Starting fuzzable on {target}")
+
     if target.is_file():
         run_on_file(target, mode, out_csv)
     elif target.is_dir():
@@ -81,7 +83,7 @@ def run_on_file(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> 
                 f"Cannot load Binary Ninja as a backend. Attempting to load angr instead."
             )
             try:
-                proj = angr.Project(target, load_options={"auto_load_libs": False})
+                proj = angr.Project(target, load_options={"auto_load_libs": True})
                 analyzer = AngrAnalysis(proj, mode)
             except Exception:
                 error(

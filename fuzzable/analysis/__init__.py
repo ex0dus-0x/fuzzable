@@ -109,19 +109,15 @@ class AnalysisBackend(abc.ABC):
         pass
 
     @staticmethod
-    def is_fuzz_friendly(symbol_name: str) -> bool:
+    def is_fuzz_friendly(symbol_name: str) -> int:
         """
-        HEURISTIC
+        FUZZABILITY HEURISTIC
+
         Analyze the function's name to see if it is "fuzzer entry friendly". This denotes
         a function that can easily be called to consume a buffer filled by the fuzzer, or
         a string pointing to a filename, which can also be supplied through a file fuzzer.
         """
-        return any(
-            [
-                pattern in symbol_name or pattern.lower() in symbol_name
-                for pattern in INTERESTING_PATTERNS
-            ]
-        )
+        return [pattern in symbol_name.lower() for pattern in INTERESTING_PATTERNS].count(True)
 
     @abc.abstractmethod
     def is_toplevel_call(self, target: t.Any) -> bool:
@@ -143,12 +139,7 @@ class AnalysisBackend(abc.ABC):
     @staticmethod
     def _is_risky_call(name: str) -> bool:
         """Helper to see if a function call deems potentially risky behaviors."""
-        return any(
-            [
-                pattern in name or pattern.lower() in name
-                for pattern in RISKY_GLIBC_CALL_PATTERNS
-            ]
-        )
+        return any([pattern in name.lower() for pattern in RISKY_GLIBC_CALL_PATTERNS])
 
     @abc.abstractmethod
     def get_coverage_depth(self, func: t.Any) -> int:

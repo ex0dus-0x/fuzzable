@@ -36,9 +36,10 @@ class CallScore:
     # quantifies the number of fuzzer arguments that flow into
     risky_sinks: int
 
-    # TODO: cyclomatic complexity
+    # quantifies the number of natural loops in the BB graph
     contains_loop: int
 
+    # quantifies complexity based on edges and nodes present
     cyclomatic_complexity: int
 
     # represents coverage by different granularities
@@ -50,7 +51,7 @@ class CallScore:
     _final_score: float = 0.0
 
     """
-    Getters and setters for mutable rank and score
+    Getters and setters for calculated rank and score
     """
 
     @property
@@ -85,6 +86,10 @@ class CallScore:
 
     def __gt__(self, other):
         self._final_rank > other._final_rank
+
+    """
+    Properties to export score into flat structures
+    """
 
     @property
     def matrix_row(self) -> t.List[int]:
