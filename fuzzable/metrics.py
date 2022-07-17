@@ -37,7 +37,7 @@ class CallScore:
     risky_sinks: int
 
     # quantifies the number of natural loops in the BB graph
-    contains_loop: int
+    natural_loops: int
 
     # quantifies complexity based on edges and nodes present
     cyclomatic_complexity: int
@@ -97,7 +97,7 @@ class CallScore:
         return [
             int(self.fuzz_friendly),
             int(self.risky_sinks),
-            int(self.contains_loop),
+            int(self.natural_loops),
             int(self.coverage_depth),
             int(self.cyclomatic_complexity),
         ]
@@ -105,12 +105,12 @@ class CallScore:
     @property
     def table_row(self) -> str:
         """Output as a markdown/ascii table row when displaying back to user"""
-        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.contains_loop} | {self.recursive} | \n"
+        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.natural_loops} | {self.recursive} | \n"
 
     @property
     def csv_row(self) -> str:
         """Generate a CSV row for exporting to file"""
-        return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.contains_loop}, {self.fuzzability}\n"
+        return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.natural_loops}, {self.fuzzability}\n"
 
     @functools.cached_property
     def simple_fuzzability(self) -> int:

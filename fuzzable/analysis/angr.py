@@ -12,12 +12,16 @@ from ..metrics import CallScore
 
 
 class AngrAnalysis(AnalysisBackend):
+    def __init__(self, target: t.Any, mode: AnalysisMode):
+        super().__init__(target, mode)
+        self.cfg = self.target.analyses.CFGFast()
+
+
     def __str__(self) -> str:
         return "angr"
 
     def run(self) -> Fuzzability:
-        cfg_fast = self.target.analyses.CFGFast()
-        for _, func in cfg_fast.functions.items():
+        for _, func in self.cfg.functions.items():
             name = func.name
 
             if self.skip_analysis(func):
@@ -41,12 +45,14 @@ class AngrAnalysis(AnalysisBackend):
         if not stripped:
             fuzz_friendly = AngrAnalysis.is_fuzz_friendly(name)
 
+        print(name)
+    
         return CallScore(
             name=name,
             toplevel=self.is_toplevel_call(func),
             fuzz_friendly=fuzz_friendly,
             risky_sinks=self.risky_sinks(func),
-            contains_loop=self.contains_loop(func),
+            natural_loops=self.natural_loops(func),
             coverage_depth=self.get_coverage_depth(func),
             cyclomatic_complexity=self.get_cyclomatic_complexity(func),
             stripped=stripped,
@@ -69,39 +75,54 @@ class AngrAnalysis(AnalysisBackend):
         return False
 
     def is_toplevel_call(self, target: t.Any) -> bool:
+        """
         program_rda = self.target.analyses.ReachingDefinitions(
             subject=target,
         )
         return len(program_rda.all_definitions) == 0
+        """
+        return True
 
     def risky_sinks(self, func: Function) -> int:
         calls_reached = func.functions_called()
-        for call in calls_reached:
-            print(call)
-
         return len(calls_reached)
 
-    def get_coverage_depth(self, func: Function) -> int:
-        """ """
-        calls_reached = func.functions_called()
-        callsites = [calls_reached]
-        while callsites:
-            to_check = callsites.pop()
+    def get_coverage_depth(self, target: Function) -> int:
+        """
+        Calculates coverage depth by doing a depth first search on function call graph,
+        and return a final depth and flag denoting recursive implementation.
+        """
+        depth = 0
+    
+        # as we iterate over callees, add to a callstack and iterate over callees
+        # for those as well, adding to the callgraph until we're done with all
+        callstack = [target]
+        while callstack:
 
-        return 0
+            # increase depth as we finish iterating over callees for another func
+            func = callstack.pop()
+            depth += 1
 
-    def contains_loop(self, func: Function) -> bool:
+            # add all childs to callgraph, and add those we haven't recursed into callstack
+            for call in func.functions_called():
+                if call not in self.visited:
+                    callstack += [call]
+                
+                self.visited += [callstack]
+
+        return depth
+
+    def natural_loops(self, func: Function) -> int:
         """
         TODO
         """
-        return False
+        return 0
 
     def get_cyclomatic_complexity(self, func: Function) -> int:
-        """
-        HEURISTIC
+        num_blocks = 0
+        for _ in func.blocks:
+            num_blocks += 1
 
-        M = E − N + 2P
-
-        TODO
-        """
-        return 0
+        # TODO: fix up
+        num_edges = len(self.cfg.graph.edges())
+        return num_blocks - num_edges + 2

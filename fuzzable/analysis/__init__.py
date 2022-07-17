@@ -5,8 +5,6 @@ import skcriteria as skc
 
 from skcriteria.madm import simple
 
-from collections import OrderedDict
-
 from ..metrics import CallScore
 from ..config import INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
 
@@ -33,9 +31,7 @@ class AnalysisBackend(abc.ABC):
         self.mode = mode
 
         self.scores: t.List[t.Any] = []
-
-        # stores only the name of the symbol we've already visited, is less expensive
-        self.parsed_symbols: t.List[t.Any] = []
+        self.visited: t.List[t.Any] = []
 
     @abc.abstractmethod
     def __str__(self) -> str:
@@ -151,7 +147,7 @@ class AnalysisBackend(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def contains_loop(self, func: t.Any) -> bool:
+    def natural_loops(self, func: t.Any) -> int:
         """
         HEURISTIC
         Detection of loops is at a basic block level by checking the dominance frontier,

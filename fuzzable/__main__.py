@@ -83,7 +83,7 @@ def run_on_file(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> 
                 f"Cannot load Binary Ninja as a backend. Attempting to load angr instead."
             )
             try:
-                proj = angr.Project(target, load_options={"auto_load_libs": True})
+                proj = angr.Project(target, load_options={"auto_load_libs": False})
                 analyzer = AngrAnalysis(proj, mode)
             except Exception:
                 error(

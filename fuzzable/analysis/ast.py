@@ -5,7 +5,6 @@ ast.py
 
 """
 import typing as t
-import functools
 
 from tree_sitter import Language, Node, Parser
 
@@ -100,7 +99,7 @@ class AstAnalysis(AnalysisBackend):
             toplevel=self.is_toplevel_call(name),
             fuzz_friendly=self.is_fuzz_friendly(name),
             risky_sinks=self.risky_sinks(func, contents),
-            contains_loop=self.contains_loop(func),
+            natural_loops=self.natural_loops(func),
             coverage_depth=self.get_coverage_depth(func),
             cyclomatic_complexity=self.get_cyclomatic_complexity(func),
             stripped=False,
@@ -212,20 +211,30 @@ class AstAnalysis(AnalysisBackend):
 
         return instances
 
-    def get_coverage_depth(self, func: t.Any) -> int:
-        return 1
+    def get_coverage_depth(self, func: Node) -> int:
+        """
+        TODO: make this traverse
+        """
+        call_query = self.language.query(
+            """
+        (call_expression) @capture
+        """
+        )
+        return len([n for (n, _) in call_query.captures(func)])
 
-    def contains_loop(self, func: t.Any) -> bool:
-        return True
+    def natural_loops(self, func: Node) -> int:
+        looping_nodes = [
+            "do_statement",
+            "for_range_loop",
+            "for_statement",
+            "while_statement",
+        ]
+        return self._visit_node(func, looping_nodes)
 
-    def get_cyclomatic_complexity(self, func: t.Any) -> int:
+    def get_cyclomatic_complexity(self, func: Node) -> int:
         """
         M = E − N + 2P
         """
-        return self._visit_node(func)
-
-    def _visit_node(self, node: Node) -> int:
-        count = 0
         branching_nodes = [
             "if_statement",
             "case_statement",
@@ -242,8 +251,12 @@ class AstAnalysis(AnalysisBackend):
             "&&",
             "||",
         ]
-        if node.type in branching_nodes:
+        return self._visit_node(func, branching_nodes)
+
+    def _visit_node(self, node: Node, checklist: t.List[str]) -> int:
+        count = 0
+        if node.type in checklist:
             count += 1
         for child in node.children:
-            count += self._visit_node(child)
+            count += self._visit_node(child, checklist)
         return count

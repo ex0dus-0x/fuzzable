@@ -54,7 +54,7 @@ def print_table(target: Path, fuzzability: Fuzzability) -> None:
             str(row.score),
             str(row.fuzz_friendly),
             str(row.risky_sinks),
-            str(row.contains_loop),
+            str(row.natural_loops),
             str(row.cyclomatic_complexity),
             str(row.coverage_depth),
         )

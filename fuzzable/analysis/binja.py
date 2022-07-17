@@ -20,7 +20,7 @@ from binaryninja.settings import Settings
 from binaryninja.plugin import BackgroundTaskThread
 
 from . import AnalysisBackend, AnalysisMode, Fuzzability
-from ..metrics import CallScore, CoverageReport
+from ..metrics import CallScore
 
 
 class _BinjaAnalysisMeta(type(AnalysisBackend), type(BackgroundTaskThread)):
@@ -37,8 +37,8 @@ class BinjaAnalysis(
         BackgroundTaskThread.__init__(
             self, "Finding fuzzable targets in current binary view"
         )
-        self.view = target
-        self.headless = headless
+        self.view: BinaryView = target
+        self.headless: bool = headless
 
     def __str__(self) -> str:
         return "Binary Ninja"
@@ -104,7 +104,7 @@ class BinjaAnalysis(
             toplevel=self.is_toplevel_call(func),
             fuzz_friendly=fuzz_friendly,
             risky_sinks=self.risky_sinks(func),
-            contains_loop=BinjaAnalysis.contains_loop(func),
+            natural_loops=BinjaAnalysis.natural_loops(func),
             coverage_depth=self.get_coverage_depth(func),
             cyclomatic_complexity=self.get_cyclomatic_complexity(func),
             stripped=stripped,
@@ -185,7 +185,7 @@ class BinjaAnalysis(
     def get_coverage_depth(self, target: Function) -> int:
         """
         Calculates coverage depth by doing a depth first search on function call graph,
-        and return a final depth and flag denoting recursive implementation
+        and return a final depth and flag denoting recursive implementation.
         """
 
         depth = 0
@@ -208,13 +208,10 @@ class BinjaAnalysis(
 
         return depth
 
-    def contains_loop(self, target: Function) -> bool:
-        return any([bb in bb.dominance_frontier for bb in target.basic_blocks])
+    def natural_loops(self, target: Function) -> int:
+        return len([bb in bb.dominance_frontier for bb in target.basic_blocks])
 
     def get_cyclomatic_complexity(self, func: Function) -> int:
-        """
-        edges - blocks + 2
-        """
         num_blocks = len(func.basic_blocks)
         num_edges = sum([len(b.outgoing_edges) for b in func.basic_blocks])
         return num_blocks - num_edges + 2
