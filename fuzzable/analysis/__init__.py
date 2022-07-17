@@ -3,7 +3,11 @@ import enum
 import typing as t
 import skcriteria as skc
 
-from skcriteria.madm import simple
+SCIKIT = True
+try:
+    from skcriteria.madm import simple
+except Exception:
+    SCIKIT = False
 
 from ..metrics import CallScore
 from ..config import INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS

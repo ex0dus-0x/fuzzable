@@ -44,8 +44,6 @@ class AngrAnalysis(AnalysisBackend):
         fuzz_friendly = False
         if not stripped:
             fuzz_friendly = AngrAnalysis.is_fuzz_friendly(name)
-
-        print(name)
     
         return CallScore(
             name=name,
@@ -74,7 +72,7 @@ class AngrAnalysis(AnalysisBackend):
 
         return False
 
-    def is_toplevel_call(self, target: t.Any) -> bool:
+    def is_toplevel_call(self, target: Function) -> bool:
         """
         program_rda = self.target.analyses.ReachingDefinitions(
             subject=target,
