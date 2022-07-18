@@ -16,7 +16,6 @@ class AngrAnalysis(AnalysisBackend):
         super().__init__(target, mode)
         self.cfg = self.target.analyses.CFGFast()
 
-
     def __str__(self) -> str:
         return "angr"
 
@@ -25,6 +24,7 @@ class AngrAnalysis(AnalysisBackend):
             name = func.name
 
             if self.skip_analysis(func):
+                self.skipped += 1
                 continue
 
             # if recommend mode, filter and run only those that are top-level
@@ -44,7 +44,7 @@ class AngrAnalysis(AnalysisBackend):
         fuzz_friendly = False
         if not stripped:
             fuzz_friendly = AngrAnalysis.is_fuzz_friendly(name)
-    
+
         return CallScore(
             name=name,
             toplevel=self.is_toplevel_call(func),
@@ -91,7 +91,7 @@ class AngrAnalysis(AnalysisBackend):
         and return a final depth and flag denoting recursive implementation.
         """
         depth = 0
-    
+
         # as we iterate over callees, add to a callstack and iterate over callees
         # for those as well, adding to the callgraph until we're done with all
         callstack = [target]
@@ -105,7 +105,7 @@ class AngrAnalysis(AnalysisBackend):
             for call in func.functions_called():
                 if call not in self.visited:
                     callstack += [call]
-                
+
                 self.visited += [callstack]
 
         return depth

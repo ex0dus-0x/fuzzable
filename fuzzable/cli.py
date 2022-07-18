@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from fuzzable.analysis import Fuzzability
+from .analysis import Fuzzability
 
 from pathlib import Path
 
@@ -23,9 +23,9 @@ COLUMNS = [
     "Function Signature",
     # "Location",
     "Fuzzability Score",
-    "Fuzz-Friendly Name?",
-    "Risky Data Sinks?",
-    "Natural Loops?",
+    "Fuzz-Friendly Name",
+    "Risky Data Sinks",
+    "Natural Loops",
     "Cyclomatic Complexity",
     "Coverage Depth",
 ]

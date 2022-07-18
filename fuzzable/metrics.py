@@ -95,45 +95,25 @@ class CallScore:
     def matrix_row(self) -> t.List[int]:
         """Transforms attributes into a list of integers for a matrix"""
         return [
-            int(self.fuzz_friendly),
-            int(self.risky_sinks),
-            int(self.natural_loops),
-            int(self.coverage_depth),
-            int(self.cyclomatic_complexity),
+            self.fuzz_friendly,
+            self.risky_sinks,
+            self.natural_loops,
+            self.coverage_depth,
+            self.cyclomatic_complexity,
         ]
 
     @property
-    def table_row(self) -> str:
+    def binja_markdown_row(self) -> str:
         """Output as a markdown/ascii table row when displaying back to user"""
-        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.fuzzability} | {self.depth} | {self.natural_loops} | {self.recursive} | \n"
+        return f"| [{self.name}](binaryninja://?expr={self.name}) | {self.score} | {self.fuzz_friendly} | {self.risky_sinks} | {self.natural_loops} | {self.cyclomatic_complexity} | {self.coverage_depth} | \n"
 
     @property
     def csv_row(self) -> str:
         """Generate a CSV row for exporting to file"""
-        return f"{self.name}, {self.stripped}, {self.interesting_name}, {self.interesting_args}, {self.depth}, {self.natural_loops}, {self.fuzzability}\n"
+        return f"{self.name}, {self.stripped}, {self.fuzz_friendly}, {self.risky_sinks}, {self.natural_loops}, {self.cyclomatic_complexity}, {self.coverage_depth}, {self.score}\n"
 
     @functools.cached_property
     def simple_fuzzability(self) -> int:
-        """
-        Calculate a fuzzability score for the given function target based on the analysis metrics.
-        """
-
-        score = 0
-        if not self.stripped:
-            score += 1
-
-        score += self.fuzz_friendly
-        score += self.risky_sinks
-
-        """
-        # function achieved an optimal threshold of coverage to be fuzzed
-        depth_threshold = int(Settings().get_string("fuzzable.depth_threshold"))
-        if self.depth >= depth_threshold:
-            score += 1.0
-
-        # contains loop won't change score if configured
-        loop_increase = Settings().get_bool("fuzzable.loop_increase_score")
-        if not loop_increase and self.has_loop:
-            score += 1.0
-        """
-        return score
+        """Simple fuzzability"""
+        self._final_score = sum(self.matrix_row)
+        return self._final_score

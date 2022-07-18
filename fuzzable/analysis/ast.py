@@ -69,6 +69,7 @@ class AstAnalysis(AnalysisBackend):
             contents = entry[1]
             for node in nodes:
                 if self.skip_analysis(node):
+                    self.skipped += 1
                     continue
 
                 # if recommend mode, filter and run only those that are top-level
@@ -168,9 +169,14 @@ class AstAnalysis(AnalysisBackend):
         )
 
         # recover only the param name
-        # TODO: include types
-        params = param_list.split(",")
-        params = [p.split(" ")[1] for p in params]
+        # TODO: include types and make this better
+        params = param_list.split(", ")
+
+        # TODO: deal with no-name arguments betters
+        try:
+            params = [p.split(" ")[1].replace("*", "") for p in params]
+        except IndexError:
+            return instances
 
         # TODO: should we add a configuration knob that supports just checking
         # for risky calls even if no arguments flow through them?
@@ -199,7 +205,7 @@ class AstAnalysis(AnalysisBackend):
             arg_list = contents[capture.start_byte + 1 : capture.end_byte - 1].decode(
                 "utf8"
             )
-            args = arg_list.split(",")
+            args = arg_list.split(", ")
 
             # this should be unreachable
             if len(args) == 0:

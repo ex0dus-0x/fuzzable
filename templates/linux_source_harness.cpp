@@ -1,17 +1,28 @@
 /* 
- * {NAME}_harness.cpp
+ * {NAME}_{function_name}_harness.cpp
  * 
- *      Automatically generated fuzzer harness for `{NAME}` target function. Make sure to add in implementation
+ *      Automatically generated fuzzer harness for `{function_name}` in `{NAME}`. Make sure to add in implementation
  *      for any other necessary functionality to make this work.
+ * 
+ *      Make sure the target binary/shared object is in the same directory!
  *
- *      To build for AFL++:
+ *      To build for AFL, optimal for black-box and file-based fuzzing:
  *
- *          $ AFL_USE_ASAN=1 afl-clang {NAME}_harness.cc -no-pie -o {NAME}_fuzzer
+ *          $ clang {NAME}_{function_name}_harness.cpp -no-pie -o {NAME}_{function_name}_harness -ldl
+ * 
+ *          # check out more binary fuzzing strategies at https://aflplus.plus/docs/binaryonly_fuzzing/
+ *          $ afl-fuzz -Q -m none -i <SEEDS> -o out/ -- ./{NAME}_{function_name}_harness
+ *
+ *      To build for libFuzzer, optimal for generative buffer fuzzing:
+ *
+ *          $ clang -DLIBFUZZER -g -fsanitize=fuzzer,address {NAME}_{function_name}_harness -no-pie -o {NAME}_{function_name}_harness -ldl
+ *          $ ./{NAME}_{function_name}_harness
  *
  */
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <stdio.h>
 
 /* DEPENDENCIES HERE */
 
@@ -23,14 +34,7 @@ int main(int argc, char** argv)
 {
     ssize_t read_bytes = read(stdin, fuzzBuffer, FUZZER_BUF);
 
-    // instantiate appropriate data structures here
-    csh handle;
-    cs_insn *insn;
-
-    size_t count;
-
     // setup and initialization calls
 
     // free memory and close file handles
-    cs_close(&handle);
 }

@@ -4,9 +4,12 @@ __main__.py
 
     Command line entry point for launching the standalone CLI executable.
 """
+import os
 import typing as t
 import typer
 import lief
+import logging
+from rich.logging import RichHandler
 
 from rich import print
 from fuzzable import generate
@@ -17,6 +20,14 @@ from fuzzable.analysis.ast import AstAnalysis
 from fuzzable.analysis.angr import AngrAnalysis
 
 from pathlib import Path
+
+FORMAT = "%(message)s"
+logging.basicConfig(
+    level="NOTSET", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+)
+log = logging.getLogger("fuzzable")
+log.setLevel(logging.INFO)
+
 
 app = typer.Typer(
     help="Framework for Automating Fuzzable Target Discovery with Static Analysis"
@@ -31,12 +42,8 @@ def analyze(
         help="Analysis mode to run under (either `recommend` or `rank`, default is `recommend`)."
         "See docs for more details about which to select.",
     ),
-    rec_export: t.Optional[bool] = typer.Option(
-        False,
-        help="If `--mode=recommend,` automatically attempt to generate harnesses for every candidate.",
-    ),
     out_csv: t.Optional[str] = typer.Option(
-        "temp.csv",
+        None,
         help="Export the analysis as a CSV to a path (default is `temp.csv`).",
     ),
 ):
@@ -48,8 +55,7 @@ def analyze(
     except Exception:
         return None
 
-    typer.echo(f"Starting fuzzable on {target}")
-
+    log.info(f"Starting fuzzable on {target}")
     if target.is_file():
         run_on_file(target, mode, out_csv)
     elif target.is_dir():
@@ -79,7 +85,7 @@ def run_on_file(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> 
         except Exception:
             import angr
 
-            typer.echo(
+            log.warning(
                 f"Cannot load Binary Ninja as a backend. Attempting to load angr instead."
             )
             try:
@@ -90,7 +96,7 @@ def run_on_file(target: Path, mode: AnalysisMode, out_csv: t.Optional[Path]) -> 
                     f"Unsupported file type `{target.suffix}`. Must be either a binary or a C/C++ source"
                 )
 
-    typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
+    log.info(f"Running fuzzable analysis with the {str(analyzer)} analyzer")
     print_table(target, analyzer.run())
 
 
@@ -102,9 +108,11 @@ def run_on_workspace(
     that are present. This is not currently supported on workspaces of binaries/libraries.
     """
     source_files = []
-    for file in target.iterdir():
-        if file.suffix in SOURCE_FILE_EXTS:
-            source_files += [file]
+    for subdir, _, files in os.walk(target):
+        for file in files:
+            if Path(file).suffix in SOURCE_FILE_EXTS:
+                log.info(f"Adding {file} to set of source code to analyze")
+                source_files += [Path(os.path.join(subdir, file))]
 
     if len(source_files) == 0:
         error(
@@ -112,7 +120,7 @@ def run_on_workspace(
         )
 
     analyzer = AstAnalysis(source_files, mode)
-    typer.echo(f"Running fuzzable analysis with {str(analyzer)} analyzer")
+    log.info(f"Running fuzzable analysis with the {str(analyzer)} analyzer")
     print_table(target, analyzer.run())
 
 

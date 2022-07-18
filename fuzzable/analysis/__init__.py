@@ -1,10 +1,10 @@
 import abc
 import enum
 import typing as t
-import skcriteria as skc
 
 SCIKIT = True
 try:
+    import skcriteria as skc
     from skcriteria.madm import simple
 except Exception:
     SCIKIT = False
@@ -34,6 +34,9 @@ class AnalysisBackend(abc.ABC):
         self.target = target
         self.mode = mode
 
+        # number of functions not analyzed
+        self.skipped: int = 0
+
         self.scores: t.List[t.Any] = []
         self.visited: t.List[t.Any] = []
 
@@ -57,6 +60,11 @@ class AnalysisBackend(abc.ABC):
 
         This should be the tail call for run, as it produces the finalized results
         """
+
+        # TODO: deprecate this.
+        if not SCIKIT:
+            return self._rank_simple_fuzzability(unranked)
+
         matrix = [score.matrix_row for score in unranked]
         names = [score.name for score in unranked]
 
@@ -92,6 +100,9 @@ class AnalysisBackend(abc.ABC):
         sorted_results = [y for _, y in sorted(zip(ranks, new_unranked))]
         return sorted_results
 
+    def _rank_simple_fuzzability(self, unranked: t.List[CallScore]) -> Fuzzability:
+        return sorted(unranked, key=lambda x: x.simple_fuzzability, reverse=True)
+
     @abc.abstractmethod
     def analyze_call(self, name: str, func: t.Any) -> CallScore:
         """
@@ -117,7 +128,9 @@ class AnalysisBackend(abc.ABC):
         a function that can easily be called to consume a buffer filled by the fuzzer, or
         a string pointing to a filename, which can also be supplied through a file fuzzer.
         """
-        return [pattern in symbol_name.lower() for pattern in INTERESTING_PATTERNS].count(True)
+        return [
+            pattern in symbol_name.lower() for pattern in INTERESTING_PATTERNS
+        ].count(True)
 
     @abc.abstractmethod
     def is_toplevel_call(self, target: t.Any) -> bool:

@@ -7,6 +7,7 @@ binja.py
 
 """
 import os
+from symtable import Symbol
 import typing as t
 
 import binaryninja
@@ -15,12 +16,14 @@ import binaryninja.interaction as interaction
 
 from binaryninja import BinaryView
 from binaryninja.function import Function
+from binaryninja.lowlevelil import LowLevelILReg
 from binaryninja.enums import LowLevelILOperation, SymbolType
 from binaryninja.settings import Settings
 from binaryninja.plugin import BackgroundTaskThread
 
 from . import AnalysisBackend, AnalysisMode, Fuzzability
 from ..metrics import CallScore
+from ..cli import COLUMNS
 
 
 class _BinjaAnalysisMeta(type(AnalysisBackend), type(BackgroundTaskThread)):
@@ -52,6 +55,7 @@ class BinjaAnalysis(
 
             log.log_debug("Checking to see if we should ignore")
             if self.skip_analysis(func):
+                self.skipped += 1
                 continue
 
             # if recommend mode, filter and run only those that are top-level
@@ -61,12 +65,12 @@ class BinjaAnalysis(
             log.log_info(f"Starting analysis for function {name}")
             score = self.analyze_call(name, func)
 
+            """
             # if a loop is detected in the target, and it exists as part a callgraph,
             # set has_loop for that parent as well
-            """
-            for prev in analyzed:
-                if score.has_loop and score.name in prev.visited:
-                    prev.has_loop = True
+            for prev in self.scores:
+                if score.natural_loops != 0 and score.name in prev.visited:
+                    prev.natural_loops = True
             """
 
             # TODO: more filtering with RECOMMEND
@@ -77,10 +81,29 @@ class BinjaAnalysis(
 
         # if headless, handle displaying results back
         if not self.headless:
-            csv_result = '"Name", "Stripped", "Interesting Name", "Interesting Args", "Depth", "Cycles", "Fuzzability"\n'
-            markdown_result = "# Fuzzable Targets\n | Function Name | Fuzzability | Coverage Depth | Has Loop? | Recursive Func? |\n| :--- | :--- | :--- | :--- |\n"
-            for score in self.scores:
-                markdown_result += score.table_row
+            csv_result = '"name", "fuzz_friendly", "risky_sinks", "natural_loops", "cyc_complex", "cov_depth", "fuzzability"\n'
+            csv_result = ", ".join([f'"{column}"' for column in COLUMNS])
+
+            # TODO: reuse rich for markdown
+            markdown_result = f"""# Fuzzable Targets
+
+This is a generated report that ranks fuzzability of every parsed symbol that was recovered in this binary. If you feel that the results
+are incomplete, wait for Binary Ninja's initial analysis to finalize and re-run this feature in the plugin.
+
+__Number of Symbols Analyzed:__ {len(ranked)}
+
+__Number of Symbols Skipped:__ {self.skipped}
+
+__Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].name})
+
+## Ranked Table (MODE = {self.mode.name})
+
+| Function Signature | Fuzzability Score | Fuzz-Friendly Name | Risky Data Sinks | Natural Loops | Cyclomatic Complexity | Coverage Depth |
+|--------------------|-------------------|--------------------|------------------|---------------|-----------------------|----------------|
+"""
+
+            for score in ranked:
+                markdown_result += score.binja_markdown_row
                 csv_result += score.csv_row
 
             log.log_info("Saving to memory and displaying finalized results...")
@@ -95,7 +118,7 @@ class BinjaAnalysis(
 
         # no need to check if no name available
         # TODO: maybe we should run this if a signature was recovered
-        fuzz_friendly = False
+        fuzz_friendly = 0
         if not stripped:
             fuzz_friendly = BinjaAnalysis.is_fuzz_friendly(name)
 
@@ -104,7 +127,7 @@ class BinjaAnalysis(
             toplevel=self.is_toplevel_call(func),
             fuzz_friendly=fuzz_friendly,
             risky_sinks=self.risky_sinks(func),
-            natural_loops=BinjaAnalysis.natural_loops(func),
+            natural_loops=self.natural_loops(func),
             coverage_depth=self.get_coverage_depth(func),
             cyclomatic_complexity=self.get_cyclomatic_complexity(func),
             stripped=stripped,
@@ -116,9 +139,13 @@ class BinjaAnalysis(
         log.log_debug(f"{name} - {symbol}")
 
         # ignore imported functions from other libraries, ie glibc or win32api
-        if (symbol is SymbolType.ImportedFunctionSymbol) or (
-            symbol is SymbolType.LibraryFunctionSymbol
-        ):
+        if symbol in [
+            SymbolType.ImportedFunctionSymbol,
+            SymbolType.LibraryFunctionSymbol,
+            SymbolType.ExternalSymbol,
+            SymbolType.ImportAddressSymbol,
+            SymbolType.ImportedDataSymbol,
+        ]:
             log.log_debug(f"{name} is an import, skipping")
             return True
 
@@ -167,8 +194,16 @@ class BinjaAnalysis(
                         LowLevelILOperation.LLIL_CALL,
                         LowLevelILOperation.LLIL_JUMP,
                     ]:
-                        callee = self.view.get_function_at(int(insn.dest))
-                        call = callee.name
+
+                        # TODO deal with registers with addrs
+                        if isinstance(insn.dest, LowLevelILReg):
+                            continue
+
+                        try:
+                            callee = self.view.get_function_at(int(insn.dest))
+                            call = callee.name
+                        except Exception:
+                            continue
 
                         # TODO: should we traverse further if not a imported func
                         if BinjaAnalysis._is_risky_call(call):
@@ -259,37 +294,40 @@ def run_export_md(view: BinaryView) -> None:
         )
         return
 
-    # TODO
+    md_file = interaction.get_save_filename_input("Filename to export as CSV?", "csv")
+    md_file = md_file.decode("utf-8") + ".md"
+
+    # parse out template based on executable format, and start replacing
+    with open(md_file, "w+") as fd:
+        fd.write(markdown_output)
+
+    interaction.show_message_box("Success", f"Done, exported to {md_file}")
 
 
 def run_harness_generation(view, func) -> None:
     """Experimental automatic fuzzer harness generation support"""
 
-    template_file = os.path.join(binaryninja.user_plugin_path(), "fuzzable")
-    if view.view_type == "ELF":
-        template_file += "/templates/linux_harness_template.cpp"
-    else:
-        interaction.show_message_box(
-            "Error",
-            "Experimental harness generation is only supported for ELFs at the moment",
-        )
-        return
-
-    # parse out template based on executable format, and start replacing
+    log.log_debug("Reading closed-source template from codebase")
+    target_name = view.file.filename.split(".")[0]
+    template_file = os.path.join(binaryninja.user_plugin_path(), "fuzzable/templates/linux_closed_source_harness.cpp")
     with open(template_file, "r") as fd:
         template = fd.read()
 
-    log.log_debug("Generating harness from template")
-    template = template.format(
-        function_name=func.name,
-        return_type=str(func.return_type),
-        parameters=func.parameter_vars,
-    )
-    harness = interaction.get_save_filename_input("Filename to write to?", "cpp")
-    harness = harness.decode("utf-8") + ".cpp"
+    params = [f"{param.type} {param.name}" for param in func.parameter_vars.vars]
 
-    log.log_debug(f"Writing harness `{harness}` to workspace")
+    log.log_debug("Generating harness from template")
+    template = template.replace("{NAME}", os.path.basename(target_name))
+    template = template.replace("{function_name}", func.name)
+    template = template.replace("{return_type}", str(func.return_type))
+    template = template.replace("{type_args}", ", ".join(params))
+
+    log.log_debug("Getting filename to write to")
+    harness = f"{target_name}_{func.name}_harness.cpp"
+    #harness = interaction.get_save_filename_input("Path to write to?", "cpp", default_name)
+    #harness = harness.decode("utf-8") + ".cpp"
+
+    log.log_info(f"Writing harness `{harness}` to workspace")
     with open(harness, "w+") as fd:
         fd.write(template)
 
-    interaction.show_message_box("Success", f"Done, wrote fuzzer harness to {harness}")
+    #interaction.show_message_box("Success", f"Done, wrote fuzzer harness to {harness}")

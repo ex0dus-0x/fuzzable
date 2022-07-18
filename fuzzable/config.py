@@ -28,6 +28,9 @@ RISKY_GLIBC_CALL_PATTERNS: t.List[str] = [
     "cmp",
     "cpy",
     "free",
+    "alloc",
+    "init",
+    "create"
 ]
 
 SETTINGS = {}
