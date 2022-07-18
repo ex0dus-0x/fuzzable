@@ -30,7 +30,7 @@ RISKY_GLIBC_CALL_PATTERNS: t.List[str] = [
     "free",
     "alloc",
     "init",
-    "create"
+    "create",
 ]
 
 SETTINGS = {}

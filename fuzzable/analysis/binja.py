@@ -309,7 +309,10 @@ def run_harness_generation(view, func) -> None:
 
     log.log_debug("Reading closed-source template from codebase")
     target_name = view.file.filename.split(".")[0]
-    template_file = os.path.join(binaryninja.user_plugin_path(), "fuzzable/templates/linux_closed_source_harness.cpp")
+    template_file = os.path.join(
+        binaryninja.user_plugin_path(),
+        "fuzzable/templates/linux_closed_source_harness.cpp",
+    )
     with open(template_file, "r") as fd:
         template = fd.read()
 
@@ -323,11 +326,11 @@ def run_harness_generation(view, func) -> None:
 
     log.log_debug("Getting filename to write to")
     harness = f"{target_name}_{func.name}_harness.cpp"
-    #harness = interaction.get_save_filename_input("Path to write to?", "cpp", default_name)
-    #harness = harness.decode("utf-8") + ".cpp"
+    # harness = interaction.get_save_filename_input("Path to write to?", "cpp", default_name)
+    # harness = harness.decode("utf-8") + ".cpp"
 
     log.log_info(f"Writing harness `{harness}` to workspace")
     with open(harness, "w+") as fd:
         fd.write(template)
 
-    #interaction.show_message_box("Success", f"Done, wrote fuzzer harness to {harness}")
+    # interaction.show_message_box("Success", f"Done, wrote fuzzer harness to {harness}")
