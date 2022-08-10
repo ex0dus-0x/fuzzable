@@ -44,6 +44,7 @@ class BinjaAnalysis(
         mode: AnalysisMode,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
         headless: bool = False,
+        skip_stripped: bool = False,
     ):
         AnalysisBackend.__init__(self, target, mode, score_weights)
         BackgroundTaskThread.__init__(

@@ -36,7 +36,7 @@ def analyze(
     ),
     export: t.Optional[Path] = typer.Option(
         None,
-        help="Export the fuzzability report based on the file extension."
+        help="Export the fuzzability report to a path based on the file extension."
         "Fuzzable supports exporting to `json`, `csv`, or `md`.",
     ),
     list_ignored: bool = typer.Option(
@@ -45,7 +45,8 @@ def analyze(
     ),
     skip_stripped: bool = typer.Option(
         False,
-        help="If set, ignore symbols that are stripped.",
+        help="If set, ignore symbols that are stripped in binary analysis."
+        "Will be ignored if fuzzability analysis is done on source code.",
     ),
     score_weights: t.Optional[str] = typer.Option(
         None,
@@ -68,7 +69,7 @@ def analyze(
         error(f"Invalid analysis mode `{mode}`. Must either be `recommend` or `rank`.")
 
     if mode == AnalysisMode.RANK and list_ignored:
-        error("--list_ignored is not needed for `rank`ing mode.")
+        error("--list_ignored is not needed for the `rank` mode.")
 
     if score_weights:
         score_weights = [float(weight) for weight in score_weights.split(",")]
@@ -122,7 +123,11 @@ def run_on_file(
             bv = BinaryViewType.get_view_of_file(target)
             bv.update_analysis_and_wait()
             analyzer = BinjaAnalysis(
-                bv, mode, score_weights=score_weights, headless=True
+                bv,
+                mode,
+                score_weights=score_weights,
+                skip_stripped=True,
+                headless=True,
             )
 
         # didn't work, try to load angr as a fallback instead
@@ -133,7 +138,12 @@ def run_on_file(
             try:
                 from fuzzable.analysis.angr import AngrAnalysis
 
-                analyzer = AngrAnalysis(target, mode, score_weights=score_weights)
+                analyzer = AngrAnalysis(
+                    target,
+                    mode,
+                    score_weights=score_weights,
+                    skip_stripped=True,
+                )
             except ModuleNotFoundError as err:
                 error(f"Unsupported target {target}. Reason: {err}")
 

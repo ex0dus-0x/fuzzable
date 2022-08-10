@@ -9,8 +9,9 @@ import typing as t
 from os.path import dirname, abspath
 from pathlib import Path
 
-# Top level directory for project
+
 def get_project_root() -> Path:
+    """Utility for getting root directory of this project"""
     return Path(__file__).parent.parent
 
 

@@ -24,6 +24,7 @@ class AngrAnalysis(AnalysisBackend):
         target: Path,
         mode: AnalysisMode,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
+        skip_stripped: bool = False,
     ):
         project = angr.Project(target, load_options={"auto_load_libs": False})
         super().__init__(project, mode, score_weights)
