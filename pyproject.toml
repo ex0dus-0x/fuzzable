@@ -3,7 +3,7 @@ name = "fuzzable"
 version = "2.0.0"
 description = "Framework for Automating Fuzzable Target Discovery with Static Analysis"
 authors = [
-    "Alan Cao <ex0dus@codemuch.tech>"
+    "ex0dus <ex0dus@codemuch.tech>"
 ]
 license = "MIT"
 readme = "README.md"
