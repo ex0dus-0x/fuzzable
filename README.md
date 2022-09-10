@@ -39,6 +39,14 @@ If you have Binary Ninja Commercial, be sure to install the API for standalone h
 $ python3 /Applications/Binary\ Ninja.app/Contents/Resources/scripts/install_api.py
 ```
 
+Install with `pip`:
+
+```
+$ pip install fuzzable
+```
+
+### Manual/Development Build
+
 We use [poetry](https://python-poetry.org) for dependency management and building. To do a manual build, clone the repository with the third-party modules:
 
 ```
