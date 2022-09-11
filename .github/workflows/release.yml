@@ -1,0 +1,17 @@
+name: Create GH and PyPI Releases
+
+on:
+  release:
+    types: [published]
+
+jobs:
+
+  gh_upload:
+    runs-on: ubuntu-20.04
+  
+  pypi_upload:
+    runs-on: ubuntu-20.04
+    #needs: tests
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
