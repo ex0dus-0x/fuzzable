@@ -22,7 +22,7 @@ jobs:
         uses: psf/black@stable
 
       - name: Pylint
-        run: pylint --disable=all --enable=unused-import $(git ls-files '*.py')
+        run: pylint fuzzable/
 
       - name: Mypy static typing
         run: mypy --strict $(git ls-files '*.py')
