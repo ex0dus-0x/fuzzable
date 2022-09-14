@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install pylint==v3.0.0a3 mypy==v0.902
+          pip install pylint mypy
 
       - name: Black Lint
         uses: psf/black@stable
