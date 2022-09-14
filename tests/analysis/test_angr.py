@@ -4,7 +4,8 @@ test_angr.py
 import unittest
 from pathlib import Path
 
-from fuzzable.analysis.angr import AngrAnalysis 
+from fuzzable.analysis.angr import AngrAnalysis
+
 
 class TestAngrAnalysis(unittest.TestCase):
     def test_basic(self):
@@ -16,5 +17,5 @@ class TestAngrAnalysis(unittest.TestCase):
         analyzer = AngrAnalysis()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

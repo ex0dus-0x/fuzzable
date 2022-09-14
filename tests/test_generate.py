@@ -4,7 +4,8 @@ test_generate.py
 import unittest
 from pathlib import Path
 
-from fuzzable import generate 
+from fuzzable import generate
+
 
 class TestHarnessGen(unittest.TestCase):
     def test_basic(self):
@@ -16,5 +17,5 @@ class TestHarnessGen(unittest.TestCase):
         generate.transform_elf_to_so()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
