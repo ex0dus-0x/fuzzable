@@ -22,10 +22,10 @@ jobs:
         uses: psf/black@stable
 
       - name: Pylint
-        run: pylint fuzzable/
+        run: pylint --fail-under=8 fuzzable/
 
-      - name: Mypy static typing
-        run: mypy --strict $(git ls-files '*.py')
+      # - name: Mypy static typing
+      #   run: mypy fuzzable/
   
   testing:
     runs-on: ubuntu-latest
