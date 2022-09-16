@@ -52,6 +52,7 @@ jobs:
     if: "${{ github.event_name == 'push' }}"
     steps:
       - name: Generate releases
+        uses: rymndhng/release-on-push-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
