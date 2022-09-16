@@ -57,7 +57,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           bump_version_scheme: minor
-          tag_prefix: v
+          tag_prefix: "v"
           use_github_release_notes: true
 
       - name: Get outputs

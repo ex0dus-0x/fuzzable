@@ -44,8 +44,10 @@ jobs:
   pypi-pkg-upload:
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
   publish-doc-site:
     runs-on: ubuntu-20.04
