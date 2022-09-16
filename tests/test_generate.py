@@ -4,7 +4,7 @@ test_generate.py
 import unittest
 from pathlib import Path
 
-from fuzzable import generate
+# from fuzzable import generate
 
 
 class TestHarnessGen(unittest.TestCase):

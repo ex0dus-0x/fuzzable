@@ -4,7 +4,7 @@ test_angr.py
 import unittest
 from pathlib import Path
 
-from fuzzable.analysis.angr import AngrAnalysis
+# from fuzzable.analysis.angr import AngrAnalysis
 
 
 class TestAngrAnalysis(unittest.TestCase):
