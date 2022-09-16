@@ -13,7 +13,7 @@ class TestHarnessGen(unittest.TestCase):
         result = sum(data)
         self.assertEqual(result, 6)
 
-    #def test_transform_elf_to_so(self):
+    # def test_transform_elf_to_so(self):
     #    generate.transform_elf_to_so()
 
 
