@@ -1,9 +1,8 @@
 """
 binja.py
 
-    Fuzzable analysis support for the Binary Ninja disassembler.
-    Can be invoked both through registered plugin handlers, and through
-    a headless standalone CLI.
+    Fuzzable analysis support for the Binary Ninja disassembler. Can be invoked both through 
+    registered plugin handlers, and through a headless standalone CLI.
 
 """
 import os

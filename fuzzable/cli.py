@@ -8,7 +8,7 @@ import json
 import typer
 import typing as t
 
-from rich import print
+from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
@@ -44,7 +44,7 @@ def error(string: str) -> None:
         string,
         fg=typer.colors.RED,
     )
-    print(f"{ERROR_START} {exception}")
+    typer.echo(f"{ERROR_START} {exception}")
     sys.exit(1)
 
 
@@ -74,16 +74,16 @@ def print_table(
     console = Console()
     console.print(table)
 
-    print("\n[bold red]ADDITIONAL METADATA[/bold red]\n")
-    print(f"[underline]Number of Symbols Analyzed[/underline]: \t\t{len(fuzzability)}")
-    print(f"[underline]Number of Symbols Skipped[/underline]: \t\t{len(skipped)}")
-    print(f"[underline]Top Fuzzing Contender[/underline]: \t\t{fuzzability[0].name}\n")
+    rprint("\n[bold red]ADDITIONAL METADATA[/bold red]\n")
+    rprint(f"[underline]Number of Symbols Analyzed[/underline]: \t\t{len(fuzzability)}")
+    rprint(f"[underline]Number of Symbols Skipped[/underline]: \t\t{len(skipped)}")
+    rprint(f"[underline]Top Fuzzing Contender[/underline]: \t\t{fuzzability[0].name}\n")
 
     if list_ignored:
-        print("\n[bold red]SKIPPED SYMBOLS[/bold red]\n")
+        rprint("\n[bold red]SKIPPED SYMBOLS[/bold red]\n")
         for name, loc in skipped.items():
-            print(f"{name}\t\t{loc}")
-        print("\n")
+            rprint(f"{name}\t\t{loc}")
+        rprint("\n")
 
 
 def export_results(export, results) -> None:

@@ -1,7 +1,7 @@
 """
 ast.py
 
-    Fuzzable analysis support for C/C++ code by through query on top of pycparser ASTs.
+    Fuzzable analysis support for C/C++ code by through query on top of tree-sitter ASTs.
 
 """
 import os

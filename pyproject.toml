@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fuzzable"
-version = "2.0.0"
+version = "2.0.1"
 description = "Framework for Automating Fuzzable Target Discovery with Static Analysis"
 authors = [
     "ex0dus <ex0dus@codemuch.tech>"
@@ -22,6 +22,7 @@ prettytable = "^3.3.0"
 lief = "^0.12.1"
 tree-sitter = "^0.20.0"
 scikit-criteria = "^0.7"
+pypcode = "^1.0.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
@@ -50,9 +51,11 @@ exclude = '''
     | \.mypy_cache
     | \.tox
     | \.venv
+    | \.github
     | _build
     | buck-out
     | build
+    | docs
     | dist
   )/
   | foo.py           # also separately exclude a file named foo.py in
