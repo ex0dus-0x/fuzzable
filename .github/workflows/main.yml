@@ -46,3 +46,22 @@ jobs:
 
       #- name: Run tests with pytest
       #  run: pytest
+
+  release:
+    runs-on: ubuntu-20.04
+    if: "${{ github.event_name == 'push' }}"
+    steps:
+      - name: Generate releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          bump_version_schema: minor
+          tag_prefix: v
+          use_github_release_notes: true
+
+      - name: Get outputs
+        run: |
+          echo "Got tag name ${{ steps.release.outputs.tag_name }}"
+          echo "Got release version ${{ steps.release.outputs.version }}"
+
+

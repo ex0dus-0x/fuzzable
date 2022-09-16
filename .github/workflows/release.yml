@@ -1,4 +1,4 @@
-name: Release Packages
+name: Publish Packages
 
 on:
   release:
@@ -41,9 +41,25 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  pypi-upload:
+  pypi-pkg-upload:
     runs-on: ubuntu-20.04
-    #needs: tests
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+
+  publish-doc-site:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install mkdocs
+        run: pip install mkdocs-material
+      
+      - name: Build and deploy site
+        run: cd docs/ && mkdocs gh-deploy --force
