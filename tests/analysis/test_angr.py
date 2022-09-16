@@ -13,8 +13,8 @@ class TestAngrAnalysis(unittest.TestCase):
         result = sum(data)
         self.assertEqual(result, 6)
 
-    def test_angr_analysis(self):
-        analyzer = AngrAnalysis()
+    #def test_angr_analysis(self):
+    #    analyzer = AngrAnalysis()
 
 
 if __name__ == "__main__":
