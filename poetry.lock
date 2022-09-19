@@ -770,6 +770,17 @@ python-versions = ">=3.6.8"
 diagrams = ["railroad-diagrams", "jinja2"]
 
 [[package]]
+name = "pypcode"
+version = "1.0.7"
+description = "Python bindings to Ghidra's SLEIGH library"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+cffi = "*"
+
+[[package]]
 name = "pyquery"
 version = "1.4.3"
 description = "A jquery-like library for python"
@@ -1080,7 +1091,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "62ea551e437d0f1f6b41ddf577693fc1ca449921dd6eaed2b18b8a90a98a658b"
+content-hash = "9e884a173d9e372be32b063702be2169e907d83d9ac527e830dc404557f96186"
 
 [metadata.files]
 ailment = []
@@ -1385,6 +1396,7 @@ pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
 ]
+pypcode = []
 pyquery = []
 pysmt = []
 pytest = [

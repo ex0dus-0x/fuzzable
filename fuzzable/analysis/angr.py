@@ -1,7 +1,7 @@
 """
 angr.py
 
-    Fallback disassembly backend, most likely for headless analysis.
+    Fallback disassembly backend with angr, most likely for headless analysis.
 """
 import typing as t
 

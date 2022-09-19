@@ -63,6 +63,9 @@ def analyze(
     if debug:
         log.setLevel(logging.DEBUG)
 
+    if not target.is_file() or target.is_dir():
+        error(f"Target path `{target}` does not exist.")
+
     try:
         mode = AnalysisMode[mode.upper()]
     except KeyError:
@@ -91,11 +94,7 @@ def analyze(
     if target.is_file():
         run_on_file(target, mode, score_weights, export, list_ignored, skip_stripped)
     elif target.is_dir():
-        run_on_workspace(
-            target, mode, score_weights, export, list_ignored, skip_stripped
-        )
-    else:
-        error(f"Target path `{target}` does not exist")
+        run_on_workspace(target, mode, score_weights, export, list_ignored)
 
 
 def run_on_file(
@@ -117,21 +116,27 @@ def run_on_file(
         # Prioritize loading binja as a backend, this may not
         # work if the license is personal/student.
         try:
+            import sys
+
+            sys.tracebacklimit = 0
+
             from binaryninja.binaryview import BinaryViewType
-            from fuzzable.analysis.binja import BinjaAnalysis
 
             bv = BinaryViewType.get_view_of_file(target)
             bv.update_analysis_and_wait()
+
+            from fuzzable.analysis.binja import BinjaAnalysis
+
             analyzer = BinjaAnalysis(
                 bv,
                 mode,
                 score_weights=score_weights,
-                skip_stripped=True,
+                skip_stripped=skip_stripped,
                 headless=True,
             )
 
         # didn't work, try to load angr as a fallback instead
-        except (ModuleNotFoundError, RuntimeError):
+        except (RuntimeError, ModuleNotFoundError, ImportError):
             log.warning(
                 f"Cannot load Binary Ninja as a backend. Attempting to load angr instead."
             )
@@ -160,7 +165,6 @@ def run_on_workspace(
     score_weights: t.List[float],
     export: t.Optional[Path],
     list_ignored: bool,
-    skip_stripped: bool,
 ) -> None:
     """
     Given a workspace, recursively iterate and parse out all of the source code files
@@ -202,8 +206,15 @@ def create_harness(
     out_harness: t.Optional[Path] = typer.Option(
         None, help="Specify to set output harness template file path."
     ),
+    debug: bool = typer.Option(
+        False,
+        help="If set, will be verbose and output debug information.",
+    ),
 ):
     """Synthesize a AFL++/libFuzzer harness for a given symbol in a target."""
+    if debug:
+        log.setLevel(logging.DEBUG)
+
     if not symbol_name:
         error("No --symbol-name specified.")
 

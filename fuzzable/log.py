@@ -12,7 +12,6 @@ for log in ["angr", "pyvex", "claripy", "cle"]:
 
 FORMAT = "%(message)s"
 logging.basicConfig(
-    level="NOTSET", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+    level=logging.INFO, format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
 )
 log = logging.getLogger("fuzzable")
-log.setLevel(logging.INFO)
