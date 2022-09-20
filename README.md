@@ -2,6 +2,8 @@
 
 ![ci](https://github.com/ex0dus-0x/fuzzable/actions/workflows/main.yml/badge.svg)
 
+[![PyPI version](https://badge.fury.io/py/fuzzable.svg)](https://badge.fury.io/py/fuzzable)
+
 Framework for Automating _Fuzzable_ Target Discovery with Static Analysis
 
 ![example](/extras/cli.png "CLI Example")

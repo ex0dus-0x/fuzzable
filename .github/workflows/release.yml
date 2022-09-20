@@ -44,6 +44,19 @@ jobs:
   pypi-pkg-upload:
     runs-on: ubuntu-20.04
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Build Dist
+        run: |
+          python3 -m pip install wheel
+          python3 setup.py sdist bdist_wheel
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
