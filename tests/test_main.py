@@ -12,6 +12,7 @@ from fuzzable.analysis import AnalysisMode
 from fuzzable.analysis.angr import AngrAnalysis
 from fuzzable.analysis.ast import AstAnalysis
 
+
 class TestMain(unittest.TestCase):
     def test_basic(self):
         data = [1, 2, 3]
@@ -31,7 +32,8 @@ class TestMain(unittest.TestCase):
     def test_analysis_source_folder(self):
         target = Path("examples/source/libyaml")
         analyzer = AstAnalysis(target, mode=AnalysisMode.RANK)
-        analyzer.run()        
+        analyzer.run()
+
 
 if __name__ == "__main__":
     unittest.main()
