@@ -218,6 +218,7 @@ pygments==2.12.0; python_full_version >= "3.6.3" and python_full_version < "4.0.
 pyparsing==3.0.9; python_full_version >= "3.6.8" and python_version >= "3.7" \
     --hash=sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc \
     --hash=sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb
+pypcode==1.0.7; python_version >= "3.6"
 pyquery==1.4.3
 pysmt==0.9.6.dev21; python_version >= "3.8"
 python-dateutil==2.8.2; python_version >= "3.8" and python_full_version < "3.0.0" or python_full_version >= "3.3.0" and python_version >= "3.8"

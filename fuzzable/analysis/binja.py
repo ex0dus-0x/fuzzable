@@ -86,8 +86,10 @@ class BinjaAnalysis(
 
         # if headless, handle displaying results back
         if not self.headless:
-            csv_result = CSV_HEADER
-            csv_result = ", ".join([f'"{column}"' for column in COLUMNS])
+            csv_result = ",".join([metric.identifier for metric in METRICS])
+
+            columns = [metric.friendly_name for metric in METRICS]
+            csv_result = ", ".join([f'"{column}"' for column in columns])
 
             # TODO: reuse rich for markdown
             markdown_result = f"""# Fuzzable Targets

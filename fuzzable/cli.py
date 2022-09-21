@@ -81,7 +81,7 @@ def export_results(export: Path, results: t.List[CallScore]) -> None:
         writer.write(json.dumps([res.asdict() for res in results]))
     elif ext == ".csv":
         csv_header = ",".join([metric.identifier for metric in METRICS])
-        writer.write(csv_header)
+        writer.write(csv_header + "\n")
         for res in results:
             writer.write(res.csv_row)
     elif ext == ".md":
