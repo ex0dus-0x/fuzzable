@@ -44,7 +44,9 @@ Settings().register_setting(
         "elementType"   : "string",
         "default"       : {}
     }
-""".format(DEFAULT_SCORE_WEIGHTS),
+""".format(
+        DEFAULT_SCORE_WEIGHTS
+    ),
 )
 
 PluginCommand.register(
