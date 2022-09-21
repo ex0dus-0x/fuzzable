@@ -26,6 +26,7 @@ from .. import generate
 from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore, METRICS
 
+
 class _BinjaAnalysisMeta(type(AnalysisBackend), type(BackgroundTaskThread)):
     pass
 
