@@ -11,7 +11,7 @@ import typing as t
 import skcriteria as skc
 from skcriteria.madm import simple
 
-from ..metrics import CallScore
+from ..metrics import CallScore, METRICS
 from ..config import INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
 
 # Type sig for a finalized list
@@ -99,13 +99,7 @@ class AnalysisBackend(abc.ABC):
             objectives,
             weights=self.score_weights,
             alternatives=names,
-            criteria=[
-                "fuzz_friendly",
-                "sinks",
-                "loop",
-                "coverage",
-                "cyclomatic_complexity",
-            ],
+            criteria=[metric.identifier for metric in METRICS[3:8]],
         )
 
         dec = simple.WeightedSumModel()
