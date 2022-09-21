@@ -3,11 +3,34 @@ metrics.py
 
     Dataclass definitions for various metrics collected during qthe risk analysis.
 """
-import json
 import functools
 import typing as t
 
 from dataclasses import dataclass, field, asdict
+
+
+@dataclass
+class MetricSchema:
+    # shorthand name
+    identifier: str
+
+    # how is displayed in the CLI/disassembly frontend
+    friendly_name: str
+
+
+# Stores all the static analysis metrics that fuzzable currently supports.
+# This list should be expanded if additional metrics are to be introduced,
+# alongside a new base method in the AnalysisBackend
+METRICS: t.List[MetricSchema] = [
+    MetricSchema(identifier="name", friendly_name="Function Signature"),
+    MetricSchema(identifier="loc", friendly_name="Location"),
+    MetricSchema(identifier="fuzzability", friendly_name="Fuzzability Score"),
+    MetricSchema(identifier="fuzz_friendly", friendly_name="Fuzz-Friendly Name"),
+    MetricSchema(identifier="risky_sinks", friendly_name="Risky Data Sinks"),
+    MetricSchema(identifier="natural_loops", friendly_name="Natural Loops"),
+    MetricSchema(identifier="cyc_complex", friendly_name="Cyclomatic Complexity"),
+    MetricSchema(identifier="cov_depth", friendly_name="Coverage Depth"),
+]
 
 
 @dataclass

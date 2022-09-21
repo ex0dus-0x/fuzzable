@@ -24,9 +24,7 @@ from binaryninja.settings import Settings
 
 from .. import generate
 from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
-from ..metrics import CallScore
-from ..cli import COLUMNS, CSV_HEADER
-
+from ..metrics import CallScore, METRICS
 
 class _BinjaAnalysisMeta(type(AnalysisBackend), type(BackgroundTaskThread)):
     pass
