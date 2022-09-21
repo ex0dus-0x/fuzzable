@@ -24,8 +24,7 @@ from binaryninja.settings import Settings
 
 from .. import generate
 from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
-from ..metrics import CallScore
-from ..cli import COLUMNS, CSV_HEADER
+from ..metrics import CallScore, METRICS
 
 
 class _BinjaAnalysisMeta(type(AnalysisBackend), type(BackgroundTaskThread)):
@@ -87,8 +86,10 @@ class BinjaAnalysis(
 
         # if headless, handle displaying results back
         if not self.headless:
-            csv_result = CSV_HEADER
-            csv_result = ", ".join([f'"{column}"' for column in COLUMNS])
+            csv_result = ",".join([metric.identifier for metric in METRICS])
+
+            columns = [metric.friendly_name for metric in METRICS]
+            csv_result = ", ".join([f'"{column}"' for column in columns])
 
             # TODO: reuse rich for markdown
             markdown_result = f"""# Fuzzable Targets

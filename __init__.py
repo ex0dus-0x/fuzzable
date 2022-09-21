@@ -27,25 +27,26 @@ Settings().register_setting(
     """
     {
         "title"         : "Skip Stripped Symbols",
-        "description"   : "Ignore stripped symbols",
+        "description"   : "Ignore stripped symbols.",
         "type"          : "boolean",
         "default"       : false
     }
 """,
 )
 
-# TODO: DEFAULT_SCORE_WEIGHTS
 Settings().register_setting(
     "fuzzable.score_weights",
     """
     {
         "title"         : "Override Score Weights",
-        "description"   : "Reset",
+        "description"   : "Change default score weights for each metric.",
         "type"          : "array",
         "elementType"   : "string",
-        "default"       : [0.3, 0.3, 0.05, 0.05, 0.3]
+        "default"       : {}
     }
-""",
+""".format(
+        DEFAULT_SCORE_WEIGHTS
+    ),
 )
 
 PluginCommand.register(

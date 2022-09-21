@@ -6,7 +6,6 @@ config.py
 """
 import typing as t
 
-from os.path import dirname, abspath
 from pathlib import Path
 
 

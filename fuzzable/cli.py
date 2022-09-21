@@ -12,7 +12,8 @@ from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
-from .analysis import Fuzzability
+from .analysis import Fuzzability, CallScore
+from .metrics import METRICS
 from .log import log
 
 from pathlib import Path
@@ -22,20 +23,6 @@ ERROR_START = typer.style(
     fg=typer.colors.WHITE,
     bg=typer.colors.RED,
 )
-
-COLUMNS = [
-    "Function Signature",
-    "Location",
-    "Fuzzability Score",
-    "Fuzz-Friendly Name",
-    "Risky Data Sinks",
-    "Natural Loops",
-    "Cyclomatic Complexity",
-    "Coverage Depth",
-]
-
-# TODO: merge with the one above
-CSV_HEADER = '"name", "loc, "fuzz_friendly", "risky_sinks", "natural_loops", "cyc_complex", "cov_depth", "fuzzability"\n'
 
 
 def error(string: str) -> None:
@@ -56,7 +43,7 @@ def print_table(
 ) -> None:
     """Pretty-prints fuzzability results for the CLI"""
     table = Table(title=f"\nFuzzable Report for Target `{target}`")
-    for column in COLUMNS:
+    for column in [metric.friendly_name for metric in METRICS]:
         table.add_column(column, style="magenta")
 
     for row in fuzzability:
@@ -86,13 +73,15 @@ def print_table(
         rprint("\n")
 
 
-def export_results(export, results) -> None:
+def export_results(export: Path, results: t.List[CallScore]) -> None:
+    """Given a file format and generated results, write to path."""
     writer = open(export, "w")
     ext = export.suffix
     if ext == ".json":
         writer.write(json.dumps([res.asdict() for res in results]))
     elif ext == ".csv":
-        writer.write(CSV_HEADER.replace('"', ""))
+        csv_header = ",".join([metric.identifier for metric in METRICS])
+        writer.write(csv_header + "\n")
         for res in results:
             writer.write(res.csv_row)
     elif ext == ".md":

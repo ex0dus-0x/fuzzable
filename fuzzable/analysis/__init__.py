@@ -8,14 +8,10 @@ import abc
 import enum
 import typing as t
 
-SCIKIT = True
-try:
-    import skcriteria as skc
-    from skcriteria.madm import simple
-except Exception:
-    SCIKIT = False
+import skcriteria as skc
+from skcriteria.madm import simple
 
-from ..metrics import CallScore
+from ..metrics import CallScore, METRICS
 from ..config import INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
 
 # Type sig for a finalized list
@@ -81,11 +77,6 @@ class AnalysisBackend(abc.ABC):
         This should be the tail call for run, as it produces the finalized results
         """
 
-        # TODO: deprecate this.
-        if not SCIKIT:
-            return self._rank_simple_fuzzability(unranked)
-
-        # normalize
         nl_normalized = AnalysisBackend._normalize(
             [score.natural_loops for score in unranked]
         )
@@ -108,13 +99,7 @@ class AnalysisBackend(abc.ABC):
             objectives,
             weights=self.score_weights,
             alternatives=names,
-            criteria=[
-                "fuzz_friendly",
-                "sinks",
-                "loop",
-                "coverage",
-                "cyclomatic_complexity",
-            ],
+            criteria=[metric.identifier for metric in METRICS[3:8]],
         )
 
         dec = simple.WeightedSumModel()
@@ -135,19 +120,9 @@ class AnalysisBackend(abc.ABC):
         sorted_results = [y for _, y in sorted(zip(ranks, new_unranked))]
         return sorted_results
 
-    def _rank_simple_fuzzability(self, unranked: t.List[CallScore]) -> Fuzzability:
-        nl_normalized = AnalysisBackend._normalize(
-            [score.natural_loops for score in unranked]
-        )
-        for score, new_nl in zip(unranked, nl_normalized):
-            score.natural_loops = new_nl
-
-        cc_normalized = AnalysisBackend._normalize(
-            [score.cyclomatic_complexity for score in unranked]
-        )
-        for score, new_cc in zip(unranked, cc_normalized):
-            score.cyclomatic_complexity = new_cc
-
+    @staticmethod
+    def _rank_simple_fuzzability(unranked: t.List[CallScore]) -> Fuzzability:
+        """Not used anymore."""
         return sorted(unranked, key=lambda obj: obj.simple_fuzzability, reverse=True)
 
     @staticmethod
@@ -201,7 +176,8 @@ class AnalysisBackend(abc.ABC):
     @abc.abstractmethod
     def risky_sinks(self, func: t.Any) -> int:
         """
-        HEURISTIC
+        FUZZABILITY HEURISTIC
+
         Checks to see if one or more of the function's arguments is
         potentially user-controlled, and flows into an abusable call.
         """
@@ -215,7 +191,8 @@ class AnalysisBackend(abc.ABC):
     @abc.abstractmethod
     def get_coverage_depth(self, func: t.Any) -> int:
         """
-        HEURISTIC
+        FUZZABILITY HEURISTIC
+
         Calculates and returns a `CoverageReport` that highlights how much
         a fuzzer would ideally explore at different granularities.
         """
@@ -224,7 +201,8 @@ class AnalysisBackend(abc.ABC):
     @abc.abstractmethod
     def natural_loops(self, func: t.Any) -> int:
         """
-        HEURISTIC
+        FUZZABILITY HEURISTIC
+
         Detection of loops is at a basic block level by checking the dominance frontier,
         which denotes the next successor the current block node will definitely reach. If the
         same basic block exists in the dominance frontier set, then that means the block will
@@ -235,7 +213,8 @@ class AnalysisBackend(abc.ABC):
     @abc.abstractmethod
     def get_cyclomatic_complexity(self) -> int:
         """
-        HEURISTIC
+        FUZZABILITY HEURISTIC
+
         Calculates the complexity of a given function using McCabe's metric. We do not
         account for connected components since we assume that the target is a singular
         connected component.

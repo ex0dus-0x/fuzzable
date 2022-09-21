@@ -63,7 +63,7 @@ def analyze(
     if debug:
         log.setLevel(logging.DEBUG)
 
-    if not target.is_file() or target.is_dir():
+    if not target.is_file() and not target.is_dir():
         error(f"Target path `{target}` does not exist.")
 
     try:
