@@ -113,6 +113,7 @@ class AstAnalysis(AnalysisBackend):
             nodes = entry[0]
             contents = entry[1]
             for node in nodes:
+                path = f"{filename}:{node.start_point[0]}"
 
                 # first, parse out name to see if we should visit again
                 log.debug(
@@ -134,7 +135,7 @@ class AstAnalysis(AnalysisBackend):
                     log.warning(
                         f"{filename} - parsing failed for {node}, reason: {err}"
                     )
-                    self.skipped += 1
+                    self.skipped[name] = path
                     continue
 
                 if name in self.visited:
@@ -144,7 +145,7 @@ class AstAnalysis(AnalysisBackend):
 
                 log.debug(f"{filename} - checking if we should skip analysis for node")
                 if self.skip_analysis(name):
-                    self.skipped[name] = f"{filename}:{node.start_point[0]}"
+                    self.skipped[name] = path
                     log.debug(f"{filename} - skipping over this one")
                     continue
 
@@ -154,7 +155,7 @@ class AstAnalysis(AnalysisBackend):
                     log.debug(
                         f"{filename} - skipping over node, since it's not top-level for recommended mode"
                     )
-                    self.skipped[name] = f"{filename}:{node.start_point[0]}"
+                    self.skipped[name] = path
                     continue
 
                 log.debug(f"{filename} - analyzing function target {name}")
