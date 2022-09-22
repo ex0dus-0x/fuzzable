@@ -29,6 +29,8 @@ pytest = "^7.1.2"
 black = { version = "^22.6.0", python = "^3.9" }
 mypy = "^0.961"
 pylint = "^2.14.5"
+githubrelease = "^1.5.9"
+GitPython = "^3.1.27"
 
 [tool.poetry.scripts]
 fuzzable = "fuzzable.__main__:app"
