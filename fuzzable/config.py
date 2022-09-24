@@ -30,6 +30,13 @@ INTERESTING_PATTERNS: t.List[str] = [
     # Decryption Routines
     "encode",
     "decode",
+    # Other stuff
+    "draw", 
+    "image", 
+    "img", 
+    "load",
+    "url", 
+    "import",
 ]
 
 # Function name patterns that include INTERESTING_PATTERNS but
