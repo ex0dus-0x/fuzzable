@@ -17,7 +17,7 @@ from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore
 from ..log import log
 
-# TODO: inherit angr.Analysis
+
 class AngrAnalysis(AnalysisBackend):
     def __init__(
         self,
@@ -40,6 +40,7 @@ class AngrAnalysis(AnalysisBackend):
         log.debug("Iterating over functions")
         for _, func in self.cfg.functions.items():
             name = func.name
+            addr = str(hex(func.addr))
 
             if name in self.visited:
                 continue
@@ -47,12 +48,12 @@ class AngrAnalysis(AnalysisBackend):
 
             if self.mode == AnalysisMode.RECOMMEND and self.skip_analysis(func):
                 log.warning(f"Skipping {name} from fuzzability analysis.")
-                self.skipped[name] = str(hex(func.addr))
+                self.skipped[name] = addr
                 continue
 
             # if recommend mode, filter and run only those that are top-level
             if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
-                self.skipped[name] = str(hex(func.addr))
+                self.skipped[name] = addr
                 continue
 
             log.info(f"Conducting fuzzability analysis on function symbol '{name}'")
@@ -63,6 +64,7 @@ class AngrAnalysis(AnalysisBackend):
 
     def analyze_call(self, name: str, func: Function) -> CallScore:
         stripped = "sub_" in name
+        addr = str(hex(func.addr))
 
         # no need to check if no name available
         # TODO: maybe we should run this if a signature was recovered
@@ -73,7 +75,7 @@ class AngrAnalysis(AnalysisBackend):
 
         return CallScore(
             name=name,
-            loc=str(hex(func.addr)),
+            loc=addr,
             toplevel=self.is_toplevel_call(func),
             fuzz_friendly=fuzz_friendly,
             risky_sinks=self.risky_sinks(func),

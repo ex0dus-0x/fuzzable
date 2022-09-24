@@ -14,8 +14,10 @@ from pathlib import Path
 import binaryninja
 import binaryninja.log as log
 import binaryninja.interaction as interaction
+import binaryninja.demangle as demangle
 
 from binaryninja import BinaryView
+from binaryninja.architecture import Architecture
 from binaryninja.function import Function
 from binaryninja.lowlevelil import LowLevelILReg
 from binaryninja.enums import LowLevelILOperation, SymbolType
@@ -60,21 +62,23 @@ class BinjaAnalysis(
 
         log.log_info(f"Starting fuzzable analysis over {len(funcs)} symbols in binary")
         for func in funcs:
-            name = func.name
 
-            # if name in self.visited:
-            #    continue
-            # self.visited += [name]
+            # demangle the symbol name
+            _, name = demangle.demangle_ms(Architecture["x86_64"], func.name)
+            name = demangle.get_qualified_name(name)
+
+            # address location for mapping
+            addr = str(hex(func.address_ranges[0].start))
 
             log.log_debug(f"Checking to see if we should ignore {name}")
             if self.mode == AnalysisMode.RECOMMEND and self.skip_analysis(func):
-                self.skipped[name] = str(hex(func.address_ranges[0].start))
+                self.skipped[name] = addr
                 continue
 
             # if recommend mode, filter and run only those that are top-level
             log.log_debug(f"Checking to see if {name} is a top-level call")
             if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
-                self.skipped[name] = str(hex(func.address_ranges[0].start))
+                self.skipped[name] = addr
                 continue
 
             log.log_info(f"Starting analysis for function {name}")
@@ -164,9 +168,9 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
             return True
 
         # ignore targets with patterns that denote some type of profiling instrumentation, ie stack canary
-        # if name.startswith("__"):
-        #    log.log_debug(f"{name} is potentially instrumentation, skipping")
-        #    return True
+        if name.startswith("__"):
+            log.log_debug(f"{name} is potentially instrumentation, skipping")
+            return True
 
         # if set, ignore all stripped functions for faster analysis
         # if ("sub_" in name) and Settings().get_bool("fuzzable.skip_stripped"):
@@ -181,8 +185,7 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
 
     def risky_sinks(self, func: Function) -> int:
         """
-        For each parameter in the function, determine if it flows into a known risky
-        function call.
+        Find references of every known insecure/risky call, and
         """
 
         risky_sinks = 0
