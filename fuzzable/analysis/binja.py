@@ -24,7 +24,7 @@ from binaryninja.enums import LowLevelILOperation, SymbolType
 from binaryninja.plugin import BackgroundTaskThread
 from binaryninja.settings import Settings
 
-from .. import generate
+from .. import generate, cli
 from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore, METRICS
 
@@ -112,7 +112,6 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
 | Function Signature | Location          | Fuzzability Score | Fuzz-Friendly Name | Risky Data Sinks | Natural Loops | Cyclomatic Complexity | Coverage Depth |
 |--------------------|-------------------|-------------------|--------------------|------------------|---------------|-----------------------|----------------|
 """
-
             for score in ranked:
                 markdown_result += score.binja_markdown_row
                 csv_result += score.csv_row
