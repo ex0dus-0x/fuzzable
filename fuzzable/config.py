@@ -31,12 +31,11 @@ INTERESTING_PATTERNS: t.List[str] = [
     "encode",
     "decode",
     # Other stuff
-    "draw", 
-    "image", 
-    "img", 
+    "draw",
+    "image",
+    "img",
     "load",
-    "url", 
-    "import",
+    "url",
 ]
 
 # Function name patterns that include INTERESTING_PATTERNS but
