@@ -54,50 +54,48 @@ class AstAnalysis(AnalysisBackend):
     def __str__(self) -> str:
         return "tree-sitter"
 
-    def _parse_symbols(self):
-        """Helper to recover all function implementations from the source targets"""
+    def _parse_symbols(self, filename: Path) -> None:
+        """Helper to recover all function implementations from a source target"""
 
-        for filename in self.target:
+        # fix up path if a basedir is present
+        if self.basedir:
+            filepath = filename.relative_to(self.basedir)
+        else:
+            filepath = filename
 
-            # fix up path if a basedir is present
-            if self.basedir:
-                filepath = filename.relative_to(self.basedir)
-            else:
-                filepath = filename
+        # if recommend mode, ignore all unit tests
+        if self.mode == AnalysisMode.RECOMMEND and "test" in str(filepath).lower():
+            log.info(f"{filepath} - skipping as it's a potential unit test file")
+            return None
 
-            # if recommend mode, ignore all unit tests
-            if self.mode == AnalysisMode.RECOMMEND and "test" in str(filepath).lower():
-                log.info(f"{filepath} - skipping as it's a potential unit test file")
-                continue
+        # switch over language if different language detected
+        extension = filepath.suffix
+        if extension in SOURCE_FILE_EXTS[1:]:
+            self.language = Language(BUILD_PATH, "cpp")
+        else:
+            self.language = Language(BUILD_PATH, "c")
 
-            # switch over language if different language detected
-            extension = filepath.suffix
-            if extension in SOURCE_FILE_EXTS[1:]:
-                self.language = Language(BUILD_PATH, "cpp")
-            else:
-                self.language = Language(BUILD_PATH, "c")
+        self.parser.set_language(self.language)
 
-            self.parser.set_language(self.language)
+        with open(filename, "rb") as source_file:
+            contents = source_file.read()
 
-            with open(filename, "rb") as source_file:
-                contents = source_file.read()
+        tree = self.parser.parse(contents)
+        # log.debug(tree.root_node.sexp())
 
-            tree = self.parser.parse(contents)
-            # log.debug(tree.root_node.sexp())
-
-            log.debug(f"{filepath} - grabbing function definitions")
-            query = self.language.query(
-                """
-            (function_definition) @capture
+        log.debug(f"{filepath} - grabbing function definitions")
+        query = self.language.query(
             """
-            )
+        (function_definition) @capture
+        """
+        )
 
-            # TODO: skip out on `static` calls if recommend mode
+        # TODO: skip out on `static` calls if recommend mode
 
-            # store mappings for the file
-            log.debug(f"{filepath} - aggregating definition captures")
-            captures = [node for (node, _) in query.captures(tree.root_node)]
-            self.parsed_symbols[filepath] = (captures, contents)
+        # store mappings for the file
+        log.debug(f"{filepath} - aggregating definition captures")
+        captures = [node for (node, _) in query.captures(tree.root_node)]
+        self.parsed_symbols[filepath] = (captures, contents)
 
     def run(self) -> Fuzzability:
         """
@@ -111,46 +109,7 @@ class AstAnalysis(AnalysisBackend):
         # first collect ASTs for every function
         log.info("Collecting and parsing ASTs for each function call")
         for filename in self.target:
-
-            # fix up path if a basedir is present
-            if self.basedir:
-                filepath = filename.relative_to(self.basedir)
-            else:
-                filepath = filename
-
-            # if recommend mode, ignore all unit tests
-            if self.mode == AnalysisMode.RECOMMEND and "test" in str(filepath).lower():
-                log.info(f"{filepath} - skipping as it's a potential unit test file")
-                continue
-
-            # switch over language if different language detected
-            extension = filepath.suffix
-            if extension in SOURCE_FILE_EXTS[1:]:
-                self.language = Language(BUILD_PATH, "cpp")
-            else:
-                self.language = Language(BUILD_PATH, "c")
-
-            self.parser.set_language(self.language)
-
-            with open(filename, "rb") as source_file:
-                contents = source_file.read()
-
-            tree = self.parser.parse(contents)
-            # log.debug(tree.root_node.sexp())
-
-            log.debug(f"{filepath} - grabbing function definitions")
-            query = self.language.query(
-                """
-            (function_definition) @capture
-            """
-            )
-
-            # TODO: skip out on `static` calls if recommend mode
-
-            # store mappings for the file
-            log.debug(f"{filepath} - aggregating definition captures")
-            captures = [node for (node, _) in query.captures(tree.root_node)]
-            self.parsed_symbols[filepath] = (captures, contents)
+            self._parse_symbols(filename)
 
         # now analyze each function_definition node
         log.info("Statically analyzing and calculating fuzzability for each call")
