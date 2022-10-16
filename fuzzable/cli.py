@@ -8,7 +8,6 @@ import json
 import typer
 import typing as t
 
-from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
@@ -35,13 +34,8 @@ def error(string: str) -> None:
     sys.exit(1)
 
 
-def print_table(
-    target: Path,
-    fuzzability: Fuzzability,
-    skipped: t.Dict[str, str],
-    list_ignored: bool,
-) -> None:
-    """Pretty-prints fuzzability results for the CLI"""
+def generate_table(target: Path, fuzzability: Fuzzability):
+    """Create a table from fuzzability results"""
     table = Table(title=f"\nFuzzable Report for Target `{target}`")
     for column in [metric.friendly_name for metric in METRICS]:
         table.add_column(column, style="magenta")
@@ -58,9 +52,23 @@ def print_table(
             str(row.coverage_depth),
         )
 
-    console = Console()
-    console.print(table)
+    return table
 
+
+def print_table(
+    target: Path,
+    fuzzability: Fuzzability,
+    skipped: t.Dict[str, str],
+    list_ignored: bool,
+) -> None:
+    """Pretty-prints fuzzability results for the CLI"""
+
+    table = generate_table(target, fuzzability)
+
+    console = Console(record=True)
+    rprint = console.print
+
+    rprint(table)
     rprint("\n[bold red]ADDITIONAL METADATA[/bold red]\n")
     rprint(f"[underline]Number of Symbols Analyzed[/underline]: \t\t{len(fuzzability)}")
     rprint(f"[underline]Number of Symbols Skipped[/underline]: \t\t{len(skipped)}")
