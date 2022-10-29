@@ -24,12 +24,14 @@ class MetricSchema:
 METRICS: t.List[MetricSchema] = [
     MetricSchema(identifier="name", friendly_name="Function Signature"),
     MetricSchema(identifier="loc", friendly_name="Location"),
-    MetricSchema(identifier="fuzzability", friendly_name="Fuzzability Score"),
+    MetricSchema(identifier="score", friendly_name="Fuzzability Score"),
     MetricSchema(identifier="fuzz_friendly", friendly_name="Fuzz-Friendly Name"),
     MetricSchema(identifier="risky_sinks", friendly_name="Risky Data Sinks"),
     MetricSchema(identifier="natural_loops", friendly_name="Natural Loops"),
-    MetricSchema(identifier="cyc_complex", friendly_name="Cyclomatic Complexity"),
-    MetricSchema(identifier="cov_depth", friendly_name="Coverage Depth"),
+    MetricSchema(
+        identifier="cyclomatic_complexity", friendly_name="Cyclomatic Complexity"
+    ),
+    MetricSchema(identifier="coverage_depth", friendly_name="Coverage Depth"),
 ]
 
 

@@ -90,7 +90,7 @@ class AstAnalysis(AnalysisBackend):
         """
         )
 
-        # TODO: skip out on `static` calls if recommend mode
+        # filter out on all `static` calls, can't be ignored
 
         # store mappings for the file
         log.debug(f"{filepath} - aggregating definition captures")

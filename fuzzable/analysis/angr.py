@@ -14,6 +14,7 @@ from angr.procedures.definitions.glibc import _libc_decls
 from pathlib import Path
 
 from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
+from ..config import GLOBAL_IGNORES
 from ..metrics import CallScore
 from ..log import log
 
@@ -88,20 +89,19 @@ class AngrAnalysis(AnalysisBackend):
     def skip_analysis(self, func: Function) -> bool:
         name = func.name
 
-        # ignore imported functions or syscalls
-        if func.is_syscall:
-            return True
-
-        # ignore common glibc calls
-        if name in _libc_decls:
+        if name in GLOBAL_IGNORES:
             return True
 
         # ignore instrumentation
         # if name.startswith("__"):
         #    return True
 
-        # ignore runtime calls from the binary
-        if name in ["_init", "frame_dummy", "call_weak_fn", "$x", "_fini"]:
+        # ignore imported functions or syscalls
+        if func.is_syscall:
+            return True
+
+        # ignore common glibc calls
+        if name in _libc_decls:
             return True
 
         # if set, ignore all stripped functions for faster analysis

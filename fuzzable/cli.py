@@ -41,16 +41,8 @@ def generate_table(target: Path, fuzzability: Fuzzability):
         table.add_column(column, style="magenta")
 
     for row in fuzzability:
-        table.add_row(
-            row.name,
-            row.loc,
-            str(row.score),
-            str(row.fuzz_friendly),
-            str(row.risky_sinks),
-            str(row.natural_loops),
-            str(row.cyclomatic_complexity),
-            str(row.coverage_depth),
-        )
+        row_args = [str(getattr(row, metric.identifier)) for metric in METRICS]
+        table.add_row(*row_args)
 
     return table
 

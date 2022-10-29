@@ -24,8 +24,9 @@ from binaryninja.enums import LowLevelILOperation, SymbolType
 from binaryninja.plugin import BackgroundTaskThread
 from binaryninja.settings import Settings
 
-from .. import generate, cli
+from .. import generate
 from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
+from ..config import GLOBAL_IGNORES
 from ..metrics import CallScore, METRICS
 
 
@@ -155,6 +156,14 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
         symbol = func.symbol.type
         log.log_debug(f"{name} - {symbol}")
 
+        if name in GLOBAL_IGNORES:
+            return True
+
+        # ignore targets with patterns that denote some type of profiling instrumentation, ie stack canary
+        if name.startswith("__"):
+            log.log_debug(f"{name} is potentially instrumentation, skipping")
+            return True
+
         # ignore imported functions from other libraries, ie glibc or win32api
         if symbol in [
             SymbolType.ImportedFunctionSymbol,
@@ -164,11 +173,6 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
             SymbolType.ImportedDataSymbol,
         ]:
             log.log_debug(f"{name} is an import, skipping")
-            return True
-
-        # ignore targets with patterns that denote some type of profiling instrumentation, ie stack canary
-        if name.startswith("__"):
-            log.log_debug(f"{name} is potentially instrumentation, skipping")
             return True
 
         # if set, ignore all stripped functions for faster analysis

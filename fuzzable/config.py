@@ -18,6 +18,17 @@ def get_project_root() -> Path:
 # TODO: we should do a very initial parse on the file to determine if it is C++ source
 SOURCE_FILE_EXTS: t.List[str] = [".c", ".cpp", ".cc", ".cp" ".cxx", ".h", ".hpp", ".hh"]
 
+GLOBAL_IGNORES: t.List[str] = [
+    "__cxa_finalize",
+    "__gmon_start__",
+    "_init",
+    "_fini",
+    "frame_dummy",
+    "call_weak_fn",
+    "register_tm_clones",
+    "$x",
+]
+
 # Interesting symbol name patterns to check for fuzzable
 INTERESTING_PATTERNS: t.List[str] = [
     # Consuming Inputs
