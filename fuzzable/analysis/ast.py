@@ -10,7 +10,7 @@ import typing as t
 from pathlib import Path
 from tree_sitter import Language, Node, Parser
 
-from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
+from . import AnalysisBackend, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore
 from ..log import log
 from ..config import get_project_root, SOURCE_FILE_EXTS
@@ -25,11 +25,12 @@ class AstAnalysis(AnalysisBackend):
     def __init__(
         self,
         target: t.List[str],
-        mode: AnalysisMode,
+        include_sym: t.List[str] = [],
+        include_nontop: bool = False,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
         basedir: t.Optional[Path] = None,
     ):
-        super().__init__(target, mode, score_weights)
+        super().__init__(target, include_sym, include_nontop, score_weights)
 
         log.debug("Building third-party tree-sitter libraries for C/C++ languages")
         Language.build_library(
@@ -63,8 +64,8 @@ class AstAnalysis(AnalysisBackend):
         else:
             filepath = filename
 
-        # if recommend mode, ignore all unit tests
-        if self.mode == AnalysisMode.RECOMMEND and "test" in str(filepath).lower():
+        # ignore all unit tests (TODO: enable)
+        if "test" in str(filepath).lower():
             log.info(f"{filepath} - skipping as it's a potential unit test file")
             return None
 
@@ -155,7 +156,7 @@ class AstAnalysis(AnalysisBackend):
 
                 # if recommend mode, filter and run only those that are top-level
                 self.is_top_level = self.is_toplevel_call(node)
-                if self.mode == AnalysisMode.RECOMMEND and not self.is_top_level:
+                if not self.include_nontop and not self.is_top_level:
                     log.debug(
                         f"{filename} - skipping over node, since it's not top-level for recommended mode"
                     )
@@ -186,6 +187,8 @@ class AstAnalysis(AnalysisBackend):
         """
         WIP
         """
+        if super().skip_analysis(name):
+            return True
 
         # name parsed is primitive type, skip
         if name in ["void", "int", "char"]:

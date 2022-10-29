@@ -13,8 +13,7 @@ from angr.procedures.definitions.glibc import _libc_decls
 
 from pathlib import Path
 
-from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
-from ..config import GLOBAL_IGNORES
+from . import AnalysisBackend, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore
 from ..log import log
 
@@ -23,12 +22,13 @@ class AngrAnalysis(AnalysisBackend):
     def __init__(
         self,
         target: Path,
-        mode: AnalysisMode,
+        include_sym: t.List[str] = [],
+        include_nontop: bool = False,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
         skip_stripped: bool = False,
     ):
         project = angr.Project(target, load_options={"auto_load_libs": False})
-        super().__init__(project, mode, score_weights)
+        super().__init__(project, include_sym, include_nontop, score_weights)
 
         log.debug("Doing initial CFG analysis on target")
         self.cfg = self.target.analyses.CFGFast()
@@ -47,13 +47,12 @@ class AngrAnalysis(AnalysisBackend):
                 continue
             self.visited += [name]
 
-            if self.mode == AnalysisMode.RECOMMEND and self.skip_analysis(func):
+            if self.skip_analysis(func):
                 log.warning(f"Skipping {name} from fuzzability analysis.")
                 self.skipped[name] = addr
                 continue
 
-            # if recommend mode, filter and run only those that are top-level
-            if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
+            if not self.include_nontop and self.is_toplevel_call(func):
                 self.skipped[name] = addr
                 continue
 
@@ -89,12 +88,8 @@ class AngrAnalysis(AnalysisBackend):
     def skip_analysis(self, func: Function) -> bool:
         name = func.name
 
-        if name in GLOBAL_IGNORES:
+        if super().skip_analysis(name):
             return True
-
-        # ignore instrumentation
-        # if name.startswith("__"):
-        #    return True
 
         # ignore imported functions or syscalls
         if func.is_syscall:

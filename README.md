@@ -2,6 +2,7 @@
 
 [![Build Status](https://github.com/ex0dus-0x/fuzzable/actions/workflows/main.yml/badge.svg)](https://github.com/ex0dus-0x/fuzzable/actions)
 [![PyPI version](https://badge.fury.io/py/fuzzable.svg)](https://badge.fury.io/py/fuzzable)
+[![Blackhat](https://raw.githubusercontent.com/toolswatch/badges/master/arsenal/usa/2022.svg)](https://raw.githubusercontent.com/toolswatch/badges/master/arsenal/usa/2022.svg)
 
 Framework for Automating _Fuzzable_ Target Discovery with Static Analysis
 

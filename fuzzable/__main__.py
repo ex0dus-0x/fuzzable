@@ -15,7 +15,7 @@ from rich import print
 from fuzzable import generate
 from fuzzable.config import SOURCE_FILE_EXTS
 from fuzzable.cli import print_table, error, export_results
-from fuzzable.analysis import AnalysisBackend, AnalysisMode, DEFAULT_SCORE_WEIGHTS
+from fuzzable.analysis import AnalysisBackend, DEFAULT_SCORE_WEIGHTS
 from fuzzable.analysis.ast import AstAnalysis
 from fuzzable.log import log
 
@@ -29,15 +29,20 @@ app = typer.Typer(
 @app.command()
 def analyze(
     target: Path,
-    mode: t.Optional[str] = typer.Option(
-        "recommend",
-        help="Analysis mode to run under (either `recommend` or `rank`, default is `recommend`)."
-        "See documentation for more details about which to select.",
+    backend: t.Optional[str] = typer.Option(
+        None, help="Set the backend to use automatically (will error if incompatible)."
     ),
     export: t.Optional[Path] = typer.Option(
         None,
         help="Export the fuzzability report to a path based on the file extension."
         "Fuzzable supports exporting to `json`, `csv`, or `md`.",
+    ),
+    include_sym: t.Optional[str] = typer.Option(
+        None,
+        help="Include symbols that are accidentally ignored to be considered for analysis.",
+    ),
+    include_nontop: bool = typer.Option(
+        False, help="If set, won't filter out only on top-level function definitions."
     ),
     list_ignored: bool = typer.Option(
         False,
@@ -50,7 +55,7 @@ def analyze(
     ),
     score_weights: t.Optional[str] = typer.Option(
         None,
-        help="Reconfigure the weights for MCDA when determining fuzzability.",
+        help="Reconfigure the weights for multi-criteria decision analysis when determining fuzzability.",
     ),
     debug: bool = typer.Option(
         False,
@@ -66,15 +71,9 @@ def analyze(
     if not target.is_file() and not target.is_dir():
         error(f"Target path `{target}` does not exist.")
 
-    try:
-        mode = AnalysisMode[mode.upper()]
-    except KeyError:
-        error(f"Invalid analysis mode `{mode}`. Must either be `recommend` or `rank`.")
-
-    if mode == AnalysisMode.RANK and list_ignored:
-        error("--list_ignored is not needed for the `rank` mode.")
-
+    # parse custom weights and run checks
     if score_weights:
+        log.debug("Reconfiguring score weights for MCDA")
         score_weights = [float(weight) for weight in score_weights.split(",")]
         num_weights = len(DEFAULT_SCORE_WEIGHTS)
         if len(score_weights) != num_weights:
@@ -85,22 +84,43 @@ def analyze(
     else:
         score_weights = DEFAULT_SCORE_WEIGHTS
 
+    # export file format checking
     if export is not None:
-        ext = export.suffix.lower()
-        if ext not in [".json", ".csv", ".md"]:
+        ext = export.suffix.lower()[1:]
+        if ext not in ["json", "csv", "md"]:
             error("--export value must either have `json`, `csv`, or `md` extensions.")
 
-    log.info(f"Starting fuzzable on {target}")
+    # parse symbols to explicitly include analysis
+    if include_sym:
+        log.debug("Parsing symbols to include")
+        include_sym = [sym for sym in include_sym.split(",")]
+        if len(include_sym) == 0:
+            error(f"--include_sym must specify a valid function symbol")
+    else:
+        include_sym = []
+
+    log.info(f"Running fuzzability analysis on {target}")
     if target.is_file():
-        run_on_file(target, mode, score_weights, export, list_ignored, skip_stripped)
+        run_on_file(
+            target,
+            score_weights,
+            include_sym,
+            include_nontop,
+            export,
+            list_ignored,
+            skip_stripped,
+        )
     elif target.is_dir():
-        run_on_workspace(target, mode, score_weights, export, list_ignored)
+        run_on_workspace(
+            target, score_weights, include_sym, include_nontop, export, list_ignored
+        )
 
 
 def run_on_file(
     target: Path,
-    mode: AnalysisMode,
     score_weights: t.List[float],
+    include_sym: t.List[str],
+    include_nontop: bool,
     export: t.Optional[Path],
     list_ignored: bool,
     skip_stripped: bool,
@@ -110,7 +130,7 @@ def run_on_file(
 
     extension = target.suffix
     if extension in SOURCE_FILE_EXTS:
-        analyzer = AstAnalysis([target], mode, score_weights=score_weights)
+        analyzer = AstAnalysis([target], score_weights=score_weights)
     else:
 
         # Prioritize loading binja as a backend, this may not
@@ -129,7 +149,8 @@ def run_on_file(
 
             analyzer = BinjaAnalysis(
                 bv,
-                mode,
+                include_sym=include_sym,
+                include_nontop=include_nontop,
                 score_weights=score_weights,
                 skip_stripped=skip_stripped,
                 headless=True,
@@ -145,7 +166,8 @@ def run_on_file(
 
                 analyzer = AngrAnalysis(
                     target,
-                    mode,
+                    include_sym=include_sym,
+                    include_nontop=include_nontop,
                     score_weights=score_weights,
                     skip_stripped=True,
                 )
@@ -161,8 +183,9 @@ def run_on_file(
 
 def run_on_workspace(
     target: Path,
-    mode: AnalysisMode,
     score_weights: t.List[float],
+    include_sym: t.List[str],
+    include_nontop: bool,
     export: t.Optional[Path],
     list_ignored: bool,
 ) -> None:

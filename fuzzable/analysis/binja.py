@@ -25,8 +25,7 @@ from binaryninja.plugin import BackgroundTaskThread
 from binaryninja.settings import Settings
 
 from .. import generate
-from . import AnalysisBackend, AnalysisMode, Fuzzability, DEFAULT_SCORE_WEIGHTS
-from ..config import GLOBAL_IGNORES
+from . import AnalysisBackend, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore, METRICS
 
 
@@ -42,12 +41,15 @@ class BinjaAnalysis(
     def __init__(
         self,
         target: BinaryView,
-        mode: AnalysisMode,
+        include_sym: t.List[str] = [],
+        include_nontop: bool = False,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
         headless: bool = False,
         skip_stripped: bool = False,
     ):
-        AnalysisBackend.__init__(self, target, mode, score_weights)
+        AnalysisBackend.__init__(
+            self, target, include_sym, include_nontop, score_weights
+        )
         BackgroundTaskThread.__init__(
             self, "Finding fuzzable targets in current binary view"
         )
@@ -72,13 +74,13 @@ class BinjaAnalysis(
             addr = str(hex(func.address_ranges[0].start))
 
             log.log_debug(f"Checking to see if we should ignore {name}")
-            if self.mode == AnalysisMode.RECOMMEND and self.skip_analysis(func):
+            if self.skip_analysis(func):
                 self.skipped[name] = addr
                 continue
 
             # if recommend mode, filter and run only those that are top-level
             log.log_debug(f"Checking to see if {name} is a top-level call")
-            if self.mode == AnalysisMode.RECOMMEND and not self.is_toplevel_call(func):
+            if not self.include_nontop and self.is_toplevel_call(func):
                 self.skipped[name] = addr
                 continue
 
@@ -154,14 +156,9 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
     def skip_analysis(self, func: Function) -> bool:
         name = func.name
         symbol = func.symbol.type
-        log.log_debug(f"{name} - {symbol}")
+        log.log_debug(f"Checking if we should skip {name} ({symbol})")
 
-        if name in GLOBAL_IGNORES:
-            return True
-
-        # ignore targets with patterns that denote some type of profiling instrumentation, ie stack canary
-        if name.startswith("__"):
-            log.log_debug(f"{name} is potentially instrumentation, skipping")
+        if super().skip_analysis(name):
             return True
 
         # ignore imported functions from other libraries, ie glibc or win32api
@@ -177,7 +174,7 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
 
         # if set, ignore all stripped functions for faster analysis
         # if ("sub_" in name) and Settings().get_bool("fuzzable.skip_stripped"):
-        if "sub_" in name and self.mode == AnalysisMode.RECOMMEND:
+        if "sub_" in name:
             log.log_debug(f"{name} is stripped, skipping")
             return True
 
@@ -285,13 +282,8 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
         return num_edges - num_blocks + 2
 
 
-def run_fuzzable_recommend(view) -> None:
-    task = BinjaAnalysis(view, AnalysisMode.RECOMMEND)
-    task.start()
-
-
-def run_fuzzable_rank(view) -> None:
-    task = BinjaAnalysis(view, AnalysisMode.RANK)
+def run_fuzzable(view) -> None:
+    task = BinjaAnalysis(view)
     task.start()
 
 
