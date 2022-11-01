@@ -179,12 +179,6 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
             log.log_debug(f"{name} is an import, skipping")
             return True
 
-        # if set, ignore all stripped functions for faster analysis
-        # if ("sub_" in name) and Settings().get_bool("fuzzable.skip_stripped"):
-        if "sub_" in name:
-            log.log_debug(f"{name} is stripped, skipping")
-            return True
-
         return False
 
     def is_toplevel_call(self, target: Function) -> bool:
@@ -290,7 +284,15 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
 
 
 def run_fuzzable(view) -> None:
-    task = BinjaAnalysis(view)
+    settings = Settings()
+    task = BinjaAnalysis(
+        view,
+        include_sym=settings.get_array("fuzzable.include_sym"),
+        include_nontop=settings.get_bool("fuzzable.include_nontop"),
+        skip_sym=settings.get_array("fuzzable.skip_sym"),
+        skip_stripped=settings.get_bool("fuzzable.skip_stripped"),
+        score_weights=settings.get_array("fuzzable.score_weights"),
+    )
     task.start()
 
 

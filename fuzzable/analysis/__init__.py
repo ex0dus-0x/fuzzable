@@ -156,6 +156,14 @@ class AnalysisBackend(abc.ABC):
         if name in self.include_sym:
             return False
 
+        # explicitly specified to not run
+        if name in self.skip_sym:
+            return True
+
+        # stripped sym, and skip_stripped is set
+        if "sub_" in name and self.skip_stripped:
+            return True
+
         # reserved calls that shouldn't be analyzed
         if name in GLOBAL_IGNORES:
             return True

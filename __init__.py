@@ -16,7 +16,7 @@ Settings().register_setting(
     "fuzzable.include_sym",
     """
     {
-        "title"         : "Include symbols",
+        "title"         : "Symbols to Include",
         "description"   : "Include symbols that are accidentally ignored to be considered for analysis.",
         "type"          : "array",
         "elementType"   : "string",
@@ -38,13 +38,14 @@ Settings().register_setting(
 )
 
 Settings().register_setting(
-    "fuzzable.list_ignored",
+    "fuzzable.skip_sym",
     """
     {
-        "title"         : "List Ignored Symbols",
-        "description"   : "Include the symbols that we've ignored using `recommend` mode.",
-        "type"          : "boolean",
-        "default"       : false
+        "title"         : "Symbols to Exclude",
+        "description"   : "Exclude symbols from being considered for analaysis.",
+        "type"          : "array",
+        "elementType"   : "string",
+        "default"       : []
     }
 """,
 )
@@ -55,6 +56,18 @@ Settings().register_setting(
     {
         "title"         : "Skip Stripped Symbols",
         "description"   : "Ignore stripped symbols.",
+        "type"          : "boolean",
+        "default"       : false
+    }
+""",
+)
+
+Settings().register_setting(
+    "fuzzable.list_ignored",
+    """
+    {
+        "title"         : "List Ignored Symbols",
+        "description"   : "Include the symbols that we've ignored using `recommend` mode.",
         "type"          : "boolean",
         "default"       : false
     }
