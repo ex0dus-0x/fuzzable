@@ -30,23 +30,26 @@ app = typer.Typer(
 def analyze(
     target: Path,
     backend: t.Optional[str] = typer.Option(
-        None, help="Set the backend to use automatically (will error if incompatible)."
+        None, help="Set the backend to use (warning: will error if incompatible)."
     ),
     export: t.Optional[Path] = typer.Option(
         None,
         help="Export the fuzzability report to a path based on the file extension."
         "Fuzzable supports exporting to `json`, `csv`, or `md`.",
     ),
+    list_ignored: bool = typer.Option(
+        False,
+        help="If set, will also additionally output and/or export ignored symbols.",
+    ),
     include_sym: t.Optional[str] = typer.Option(
         None,
-        help="Include symbols that are accidentally ignored to be considered for analysis.",
+        help="Comma-seperated list of symbols to absolutely be considered for analysis.",
     ),
     include_nontop: bool = typer.Option(
         False, help="If set, won't filter out only on top-level function definitions."
     ),
-    list_ignored: bool = typer.Option(
-        False,
-        help="If set, will also additionally output and/or export ignored symbols.",
+    skip_sym: t.Optional[str] = typer.Option(
+        None, help="Comma-seperated list of symbols to skip during analysis."
     ),
     skip_stripped: bool = typer.Option(
         False,
@@ -55,7 +58,7 @@ def analyze(
     ),
     score_weights: t.Optional[str] = typer.Option(
         None,
-        help="Reconfigure the weights for multi-criteria decision analysis when determining fuzzability.",
+        help="Comma-seperated list of reconfigured weights for multi-criteria decision analysis when determining fuzzability.",
     ),
     debug: bool = typer.Option(
         False,
@@ -90,50 +93,75 @@ def analyze(
         if ext not in ["json", "csv", "md"]:
             error("--export value must either have `json`, `csv`, or `md` extensions.")
 
-    # parse symbols to explicitly include analysis
+    # parse symbols to explicitly include for analysis
     if include_sym:
-        log.debug("Parsing symbols to include")
         include_sym = [sym for sym in include_sym.split(",")]
         if len(include_sym) == 0:
-            error(f"--include_sym must specify a valid function symbol")
+            error(f"--include_sym must include at least one valid function symbol")
+
+        log.debug(f"Parsed symbols to explicitly include for analysis {include_sym}")
     else:
         include_sym = []
+
+    # parse symbols to explicitly exclude from analysis
+    if skip_sym:
+        skip_sym = [sym for sym in skip_sym.split(",")]
+        if len(skip_sym) == 0:
+            error(f"--skip_sym must specify a valid function symbol")
+
+        log.debug(f"Parsed symbols to explicitly include for analysis {skip_sym}")
+    else:
+        skip_sym = []
 
     log.info(f"Running fuzzability analysis on {target}")
     if target.is_file():
         run_on_file(
             target,
-            score_weights,
-            include_sym,
-            include_nontop,
             export,
             list_ignored,
+            include_sym,
+            include_nontop,
+            skip_sym,
             skip_stripped,
+            score_weights,
         )
     elif target.is_dir():
         run_on_workspace(
-            target, score_weights, include_sym, include_nontop, export, list_ignored
+            target,
+            export,
+            list_ignored,
+            include_sym,
+            include_nontop,
+            skip_sym,
+            skip_stripped,
+            score_weights,
         )
 
 
 def run_on_file(
     target: Path,
-    score_weights: t.List[float],
-    include_sym: t.List[str],
-    include_nontop: bool,
     export: t.Optional[Path],
     list_ignored: bool,
+    include_sym: t.List[str],
+    include_nontop: bool,
+    skip_sym: t.List[str],
     skip_stripped: bool,
+    score_weights: t.List[float],
 ) -> None:
     """Runs analysis on a single source code file or binary file."""
     analyzer: t.TypeVar[AnalysisBackend]
 
     extension = target.suffix
     if extension in SOURCE_FILE_EXTS:
-        analyzer = AstAnalysis([target], score_weights=score_weights)
+        analyzer = AstAnalysis(
+            [target],
+            include_sym=include_sym,
+            include_nontop=include_nontop,
+            score_weights=score_weights,
+        )
     else:
 
-        # Prioritize loading binja as a backend, this may not
+        # Prioritize loading binja as a backend, this will not
         # work if the license is personal/student.
         try:
             import sys
@@ -183,11 +211,13 @@ def run_on_file(
 
 def run_on_workspace(
     target: Path,
-    score_weights: t.List[float],
-    include_sym: t.List[str],
-    include_nontop: bool,
     export: t.Optional[Path],
     list_ignored: bool,
+    include_sym: t.List[str],
+    include_nontop: bool,
+    skip_sym: t.List[str],
+    skip_stripped: bool,
+    score_weights: t.List[float],
 ) -> None:
     """
     Given a workspace, recursively iterate and parse out all of the source code files
@@ -206,7 +236,11 @@ def run_on_workspace(
         )
 
     analyzer = AstAnalysis(
-        source_files, mode, score_weights=score_weights, basedir=target
+        source_files,
+        include_sym=include_sym,
+        include_nontop=include_nontop,
+        score_weights=score_weights,
+        basedir=target,
     )
     log.info(f"Running fuzzable analysis with the {str(analyzer)} analyzer")
     results = analyzer.run()

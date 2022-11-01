@@ -43,9 +43,9 @@ class BinjaAnalysis(
         target: BinaryView,
         include_sym: t.List[str] = [],
         include_nontop: bool = False,
+        skip_stripped: bool = False,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
         headless: bool = False,
-        skip_stripped: bool = False,
     ):
         AnalysisBackend.__init__(
             self, target, include_sym, include_nontop, score_weights

@@ -5,7 +5,6 @@ __init__.py
 """
 
 import abc
-import enum
 import typing as t
 
 import skcriteria as skc

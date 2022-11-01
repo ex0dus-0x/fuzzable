@@ -13,7 +13,7 @@ from angr.procedures.definitions.glibc import _libc_decls
 
 from pathlib import Path
 
-from . import AnalysisBackend, Fuzzability, DEFAULT_SCORE_WEIGHTS
+from . import AnalysisBackend, AnalysisException, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore
 from ..log import log
 
@@ -24,8 +24,8 @@ class AngrAnalysis(AnalysisBackend):
         target: Path,
         include_sym: t.List[str] = [],
         include_nontop: bool = False,
-        score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
         skip_stripped: bool = False,
+        score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
     ):
         project = angr.Project(target, load_options={"auto_load_libs": False})
         super().__init__(project, include_sym, include_nontop, score_weights)
@@ -52,13 +52,19 @@ class AngrAnalysis(AnalysisBackend):
                 self.skipped[name] = addr
                 continue
 
-            if not self.include_nontop and self.is_toplevel_call(func):
+            if not self.include_nontop and not self.is_toplevel_call(func):
+                log.warning(f"Skipping {name} (top-level) from fuzzability analysis.")
                 self.skipped[name] = addr
                 continue
 
             log.info(f"Conducting fuzzability analysis on function symbol '{name}'")
             score = self.analyze_call(name, func)
             self.scores += [score]
+
+        if len(self.scores) == 0:
+            raise AnalysisException(
+                "No suitable function symbols filtered for analysis."
+            )
 
         return super()._rank_fuzzability(self.scores)
 
