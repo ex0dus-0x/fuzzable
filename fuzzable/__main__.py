@@ -179,8 +179,9 @@ def run_on_file(
                 bv,
                 include_sym=include_sym,
                 include_nontop=include_nontop,
-                score_weights=score_weights,
+                skip_sym=skip_sym,
                 skip_stripped=skip_stripped,
+                score_weights=score_weights,
                 headless=True,
             )
 
@@ -196,8 +197,9 @@ def run_on_file(
                     target,
                     include_sym=include_sym,
                     include_nontop=include_nontop,
+                    skip_sym=skip_sym,
+                    skip_stripped=skip_stripped,
                     score_weights=score_weights,
-                    skip_stripped=True,
                 )
             except ModuleNotFoundError as err:
                 error(f"Unsupported target {target}. Reason: {err}")
@@ -216,7 +218,7 @@ def run_on_workspace(
     include_sym: t.List[str],
     include_nontop: bool,
     skip_sym: t.List[str],
-    skip_stripped: bool,
+    skip_stripped: bool,  # not used, maybe until we support multiple binaries
     score_weights: t.List[float],
 ) -> None:
     """
@@ -239,6 +241,7 @@ def run_on_workspace(
         source_files,
         include_sym=include_sym,
         include_nontop=include_nontop,
+        skip_sym=skip_sym,
         score_weights=score_weights,
         basedir=target,
     )

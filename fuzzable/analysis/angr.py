@@ -24,11 +24,14 @@ class AngrAnalysis(AnalysisBackend):
         target: Path,
         include_sym: t.List[str] = [],
         include_nontop: bool = False,
+        skip_sym: t.List[str] = [],
         skip_stripped: bool = False,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
     ):
         project = angr.Project(target, load_options={"auto_load_libs": False})
-        super().__init__(project, include_sym, include_nontop, score_weights)
+        super().__init__(
+            project, include_sym, include_nontop, skip_sym, skip_stripped, score_weights
+        )
 
         log.debug("Doing initial CFG analysis on target")
         self.cfg = self.target.analyses.CFGFast()

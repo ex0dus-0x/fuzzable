@@ -43,12 +43,19 @@ class BinjaAnalysis(
         target: BinaryView,
         include_sym: t.List[str] = [],
         include_nontop: bool = False,
+        skip_sym: t.List[str] = [],
         skip_stripped: bool = False,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
         headless: bool = False,
     ):
         AnalysisBackend.__init__(
-            self, target, include_sym, include_nontop, score_weights
+            self,
+            target,
+            include_sym,
+            include_nontop,
+            skip_sym,
+            skip_stripped,
+            score_weights,
         )
         BackgroundTaskThread.__init__(
             self, "Finding fuzzable targets in current binary view"

@@ -27,10 +27,11 @@ class AstAnalysis(AnalysisBackend):
         target: t.List[str],
         include_sym: t.List[str] = [],
         include_nontop: bool = False,
+        skip_sym: t.List[str] = [],
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
         basedir: t.Optional[Path] = None,
     ):
-        super().__init__(target, include_sym, include_nontop, score_weights)
+        super().__init__(target, include_sym, include_nontop, skip_sym, score_weights)
 
         log.debug("Building third-party tree-sitter libraries for C/C++ languages")
         Language.build_library(

@@ -32,6 +32,8 @@ class AnalysisBackend(abc.ABC):
         target: t.Any,
         include_sym: t.List[str] = [],
         include_nontop: bool = False,
+        skip_sym: t.List[str] = [],
+        skip_stripped: bool = False,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
     ):
         self.target = target
@@ -39,6 +41,10 @@ class AnalysisBackend(abc.ABC):
         # configures inclusion
         self.include_sym: t.List[str] = include_sym
         self.include_nontop: bool = include_nontop
+
+        # configures exclusion
+        self.skip_sym: t.List[str] = skip_sym
+        self.skip_stripped: bool = skip_stripped
 
         # weights of each feature for MCDA
         self.score_weights: t.List[float] = score_weights
