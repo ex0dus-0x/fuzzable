@@ -9,15 +9,43 @@ from binaryninja.settings import Settings
 
 from .fuzzable.analysis import binja, DEFAULT_SCORE_WEIGHTS
 
+# TODO register settings from a config of analysis flags
+
 Settings().register_group("fuzzable", "Fuzzable")
 Settings().register_setting(
-    "fuzzable.list_ignored",
+    "fuzzable.include_sym",
     """
     {
-        "title"         : "List Ignored Symbols",
-        "description"   : "Include the symbols that we've ignored using `recommend` mode.",
+        "title"         : "Symbols to Include",
+        "description"   : "Include symbols that are accidentally ignored to be considered for analysis.",
+        "type"          : "array",
+        "elementType"   : "string",
+        "default"       : []
+    }
+""",
+)
+
+Settings().register_setting(
+    "fuzzable.include_nontop",
+    """
+    {
+        "title"         : "Include non-top level calls",
+        "description"   : "If set, won't filter out only on top-level function definitions.",
         "type"          : "boolean",
         "default"       : false
+    }
+""",
+)
+
+Settings().register_setting(
+    "fuzzable.skip_sym",
+    """
+    {
+        "title"         : "Symbols to Exclude",
+        "description"   : "Exclude symbols from being considered for analaysis.",
+        "type"          : "array",
+        "elementType"   : "string",
+        "default"       : []
     }
 """,
 )
@@ -28,6 +56,18 @@ Settings().register_setting(
     {
         "title"         : "Skip Stripped Symbols",
         "description"   : "Ignore stripped symbols.",
+        "type"          : "boolean",
+        "default"       : false
+    }
+""",
+)
+
+Settings().register_setting(
+    "fuzzable.list_ignored",
+    """
+    {
+        "title"         : "List Ignored Symbols",
+        "description"   : "Include the symbols that we've ignored using `recommend` mode.",
         "type"          : "boolean",
         "default"       : false
     }
@@ -50,16 +90,10 @@ Settings().register_setting(
 )
 
 PluginCommand.register(
-    "Fuzzable\\Analysis Mode\\Recommend Fuzzable Functions (much faster)",
+    "Fuzzable\\Analyze & Rank Function",
     "List out functions we've determined to be the best candidates for fuzzing."
     "This will exclude functions that is determined to not be directly usable for a harness.",
-    binja.run_fuzzable_recommend,
-)
-
-PluginCommand.register(
-    "Fuzzable\\Analysis Mode\\Rank All Function by Fuzzability (more comprehensive)",
-    "Generate fuzzability scores for all functions and rank. This will not exclude any function.",
-    binja.run_fuzzable_rank,
+    binja.run_fuzzable,
 )
 
 PluginCommand.register(

@@ -5,14 +5,13 @@ __init__.py
 """
 
 import abc
-import enum
 import typing as t
 
 import skcriteria as skc
 from skcriteria.madm import simple
 
 from ..metrics import CallScore, METRICS
-from ..config import INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
+from ..config import GLOBAL_IGNORES, INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
 
 # Type sig for a finalized list
 Fuzzability = t.OrderedDict[str, CallScore]
@@ -25,27 +24,30 @@ class AnalysisException(Exception):
     """Raised when an analysis fails to succeed."""
 
 
-class AnalysisMode(enum.Enum):
-    """Describes how we should analyze targets and present results."""
-
-    RECOMMEND = 0
-    RANK = 1
-
-
 class AnalysisBackend(abc.ABC):
     """Base class for analysis backends to implement and detect fuzzable targets."""
 
     def __init__(
         self,
         target: t.Any,
-        mode: AnalysisMode,
+        include_sym: t.List[str] = [],
+        include_nontop: bool = False,
+        skip_sym: t.List[str] = [],
+        skip_stripped: bool = False,
         score_weights: t.List[float] = DEFAULT_SCORE_WEIGHTS,
     ):
         self.target = target
-        self.mode = mode
+
+        # configures inclusion
+        self.include_sym: t.List[str] = include_sym
+        self.include_nontop: bool = include_nontop
+
+        # configures exclusion
+        self.skip_sym: t.List[str] = skip_sym
+        self.skip_stripped: bool = skip_stripped
 
         # weights of each feature for MCDA
-        self.score_weights = score_weights
+        self.score_weights: t.List[float] = score_weights
 
         # mapping of functions + locations we've chosen to skipped
         self.skipped: t.Dict[str, str] = {}
@@ -145,12 +147,32 @@ class AnalysisBackend(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def skip_analysis(self, func: t.Any) -> bool:
+    def skip_analysis(self, name: str) -> bool:
         """
         Helper to determine if a parsed function should be skipped
         for analysis based on certain criteria for the analysis backend.
         """
-        ...
+        # explicitly specified to run
+        if name in self.include_sym:
+            return False
+
+        # explicitly specified to not run
+        if name in self.skip_sym:
+            return True
+
+        # stripped sym, and skip_stripped is set
+        if "sub_" in name and self.skip_stripped:
+            return True
+
+        # reserved calls that shouldn't be analyzed
+        if name in GLOBAL_IGNORES:
+            return True
+
+        # ignore instrumentation
+        if name.startswith("__"):
+            return True
+
+        return False
 
     @staticmethod
     def is_fuzz_friendly(symbol_name: str) -> int:

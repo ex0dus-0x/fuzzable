@@ -15,7 +15,7 @@ from rich import print
 from fuzzable import generate
 from fuzzable.config import SOURCE_FILE_EXTS
 from fuzzable.cli import print_table, error, export_results
-from fuzzable.analysis import AnalysisBackend, AnalysisMode, DEFAULT_SCORE_WEIGHTS
+from fuzzable.analysis import AnalysisBackend, DEFAULT_SCORE_WEIGHTS
 from fuzzable.analysis.ast import AstAnalysis
 from fuzzable.log import log
 
@@ -29,11 +29,6 @@ app = typer.Typer(
 @app.command()
 def analyze(
     target: Path,
-    mode: t.Optional[str] = typer.Option(
-        "recommend",
-        help="Analysis mode to run under (either `recommend` or `rank`, default is `recommend`)."
-        "See documentation for more details about which to select.",
-    ),
     export: t.Optional[Path] = typer.Option(
         None,
         help="Export the fuzzability report to a path based on the file extension."
@@ -43,6 +38,16 @@ def analyze(
         False,
         help="If set, will also additionally output and/or export ignored symbols.",
     ),
+    include_sym: t.Optional[str] = typer.Option(
+        None,
+        help="Comma-seperated list of symbols to absolutely be considered for analysis.",
+    ),
+    include_nontop: bool = typer.Option(
+        False, help="If set, won't filter out only on top-level function definitions."
+    ),
+    skip_sym: t.Optional[str] = typer.Option(
+        None, help="Comma-seperated list of symbols to skip during analysis."
+    ),
     skip_stripped: bool = typer.Option(
         False,
         help="If set, ignore symbols that are stripped in binary analysis."
@@ -50,31 +55,29 @@ def analyze(
     ),
     score_weights: t.Optional[str] = typer.Option(
         None,
-        help="Reconfigure the weights for MCDA when determining fuzzability.",
+        help="Comma-seperated list of reconfigured weights for multi-criteria decision analysis when determining fuzzability.",
     ),
-    debug: bool = typer.Option(
-        False,
-        help="If set, will be verbose and output debug information.",
+    verbosity: int = typer.Option(
+        0,
+        help="Sets logging level (2 = debug, 1 = info, 0 = output)",
     ),
 ):
     """
     Run fuzzable analysis on a single or workspace of C/C++ source files, or a compiled binary.
     """
-    if debug:
+
+    # parse verbosity
+    if verbosity == 1:
+        log.setLevel(logging.INFO)
+    elif verbosity == 2:
         log.setLevel(logging.DEBUG)
 
     if not target.is_file() and not target.is_dir():
         error(f"Target path `{target}` does not exist.")
 
-    try:
-        mode = AnalysisMode[mode.upper()]
-    except KeyError:
-        error(f"Invalid analysis mode `{mode}`. Must either be `recommend` or `rank`.")
-
-    if mode == AnalysisMode.RANK and list_ignored:
-        error("--list_ignored is not needed for the `rank` mode.")
-
+    # parse custom weights and run checks
     if score_weights:
+        log.debug("Reconfiguring score weights for MCDA")
         score_weights = [float(weight) for weight in score_weights.split(",")]
         num_weights = len(DEFAULT_SCORE_WEIGHTS)
         if len(score_weights) != num_weights:
@@ -85,35 +88,85 @@ def analyze(
     else:
         score_weights = DEFAULT_SCORE_WEIGHTS
 
+    # export file format checking
     if export is not None:
-        ext = export.suffix.lower()
-        if ext not in [".json", ".csv", ".md"]:
+        ext = export.suffix.lower()[1:]
+        if ext not in ["json", "csv", "md"]:
             error("--export value must either have `json`, `csv`, or `md` extensions.")
 
-    log.info(f"Starting fuzzable on {target}")
+    # parse symbols to explicitly include for analysis
+    if include_sym:
+        include_sym = [sym for sym in include_sym.split(",")]
+        if len(include_sym) == 0:
+            error(f"--include_sym must include at least one valid function symbol")
+
+        log.debug(f"Parsed symbols to explicitly include for analysis {include_sym}")
+    else:
+        include_sym = []
+
+    # parse symbols to explicitly exclude from analysis
+    if skip_sym:
+        skip_sym = [sym for sym in skip_sym.split(",")]
+        if len(skip_sym) == 0:
+            error(f"--skip_sym must specify a valid function symbol")
+
+        log.debug(f"Parsed symbols to explicitly include for analysis {skip_sym}")
+    else:
+        skip_sym = []
+
+    # check if overlapping symbols
+    if set(skip_sym) & set(include_sym):
+        error(f"Cannot have same symbols in both --include_sym and --skip_sym.")
+
+    log.info(f"Running fuzzability analysis on {target}")
     if target.is_file():
-        run_on_file(target, mode, score_weights, export, list_ignored, skip_stripped)
+        run_on_file(
+            target,
+            export,
+            list_ignored,
+            include_sym,
+            include_nontop,
+            skip_sym,
+            skip_stripped,
+            score_weights,
+        )
     elif target.is_dir():
-        run_on_workspace(target, mode, score_weights, export, list_ignored)
+        run_on_workspace(
+            target,
+            export,
+            list_ignored,
+            include_sym,
+            include_nontop,
+            skip_sym,
+            skip_stripped,
+            score_weights,
+        )
 
 
 def run_on_file(
     target: Path,
-    mode: AnalysisMode,
-    score_weights: t.List[float],
     export: t.Optional[Path],
     list_ignored: bool,
+    include_sym: t.List[str],
+    include_nontop: bool,
+    skip_sym: t.List[str],
     skip_stripped: bool,
+    score_weights: t.List[float],
 ) -> None:
     """Runs analysis on a single source code file or binary file."""
     analyzer: t.TypeVar[AnalysisBackend]
 
     extension = target.suffix
     if extension in SOURCE_FILE_EXTS:
-        analyzer = AstAnalysis([target], mode, score_weights=score_weights)
+        analyzer = AstAnalysis(
+            [target],
+            include_sym=include_sym,
+            include_nontop=include_nontop,
+            score_weights=score_weights,
+        )
     else:
 
-        # Prioritize loading binja as a backend, this may not
+        # Prioritize loading binja as a backend, this will not
         # work if the license is personal/student.
         try:
             import sys
@@ -129,9 +182,11 @@ def run_on_file(
 
             analyzer = BinjaAnalysis(
                 bv,
-                mode,
-                score_weights=score_weights,
+                include_sym=include_sym,
+                include_nontop=include_nontop,
+                skip_sym=skip_sym,
                 skip_stripped=skip_stripped,
+                score_weights=score_weights,
                 headless=True,
             )
 
@@ -145,9 +200,11 @@ def run_on_file(
 
                 analyzer = AngrAnalysis(
                     target,
-                    mode,
+                    include_sym=include_sym,
+                    include_nontop=include_nontop,
+                    skip_sym=skip_sym,
+                    skip_stripped=skip_stripped,
                     score_weights=score_weights,
-                    skip_stripped=True,
                 )
             except ModuleNotFoundError as err:
                 error(f"Unsupported target {target}. Reason: {err}")
@@ -161,10 +218,13 @@ def run_on_file(
 
 def run_on_workspace(
     target: Path,
-    mode: AnalysisMode,
-    score_weights: t.List[float],
     export: t.Optional[Path],
     list_ignored: bool,
+    include_sym: t.List[str],
+    include_nontop: bool,
+    skip_sym: t.List[str],
+    skip_stripped: bool,  # not used, maybe until we support multiple binaries
+    score_weights: t.List[float],
 ) -> None:
     """
     Given a workspace, recursively iterate and parse out all of the source code files
@@ -183,7 +243,12 @@ def run_on_workspace(
         )
 
     analyzer = AstAnalysis(
-        source_files, mode, score_weights=score_weights, basedir=target
+        source_files,
+        include_sym=include_sym,
+        include_nontop=include_nontop,
+        skip_sym=skip_sym,
+        score_weights=score_weights,
+        basedir=target,
     )
     log.info(f"Running fuzzable analysis with the {str(analyzer)} analyzer")
     results = analyzer.run()
@@ -206,13 +271,17 @@ def create_harness(
     out_harness: t.Optional[Path] = typer.Option(
         None, help="Specify to set output harness template file path."
     ),
-    debug: bool = typer.Option(
-        False,
-        help="If set, will be verbose and output debug information.",
+    verbosity: int = typer.Option(
+        0,
+        help="Sets logging level (2 = debug, 1 = info, 0 = output)",
     ),
 ):
     """Synthesize a AFL++/libFuzzer harness for a given symbol in a target."""
-    if debug:
+
+    # parse verbosity
+    if verbosity == 1:
+        log.setLevel(logging.INFO)
+    elif verbosity == 2:
         log.setLevel(logging.DEBUG)
 
     if not symbol_name:

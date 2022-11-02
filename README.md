@@ -2,6 +2,7 @@
 
 [![Build Status](https://github.com/ex0dus-0x/fuzzable/actions/workflows/main.yml/badge.svg)](https://github.com/ex0dus-0x/fuzzable/actions)
 [![PyPI version](https://badge.fury.io/py/fuzzable.svg)](https://badge.fury.io/py/fuzzable)
+[![Blackhat](https://raw.githubusercontent.com/toolswatch/badges/master/arsenal/usa/2022.svg)](https://raw.githubusercontent.com/toolswatch/badges/master/arsenal/usa/2022.svg)
 
 Framework for Automating _Fuzzable_ Target Discovery with Static Analysis
 
@@ -117,8 +118,7 @@ $ fuzzable analyze <TARGET> --score-weights=0.2,0.2,0.2,0.2,0.2
 
 ### Analysis Mode
 
-By default, __fuzzable__ will utilize the _recommend_ mode, where many function targets will be filtered out
-from analysis and fuzzability consideration. The following criteria are used when filtering:
+By default, __fuzzable__ will filter out function targets based on the following criteria:
 
 * __Top-level entry calls__ - functions that aren't called by any other calls in the target. These are ideal entry points that have potentially very high coverage.
 * __Static calls__ - _(source only)_ functions that are `static` and aren't exposed through headers.
@@ -184,7 +184,7 @@ In the CLI, simply pass the `--export` argument with a filename with the appropr
 $ fuzzable analyze --export=report.json <TARGET>
 ```
 
-In Binary Ninja, go to `Plugins > Fuzzable > Export Fuzzability Report` and select the format you want to
+In Binary Ninja, go to `Plugins > Fuzzable > Export Fuzzability Report > ...` and select the format you want to
 export to and the path you want to write it to.
 
 ## Contributing
