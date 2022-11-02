@@ -29,9 +29,6 @@ app = typer.Typer(
 @app.command()
 def analyze(
     target: Path,
-    backend: t.Optional[str] = typer.Option(
-        None, help="Set the backend to use (warning: will error if incompatible)."
-    ),
     export: t.Optional[Path] = typer.Option(
         None,
         help="Export the fuzzability report to a path based on the file extension."
@@ -60,15 +57,19 @@ def analyze(
         None,
         help="Comma-seperated list of reconfigured weights for multi-criteria decision analysis when determining fuzzability.",
     ),
-    debug: bool = typer.Option(
-        False,
-        help="If set, will be verbose and output debug information.",
+    verbosity: int = typer.Option(
+        0,
+        help="Sets logging level (2 = debug, 1 = info, 0 = output)",
     ),
 ):
     """
     Run fuzzable analysis on a single or workspace of C/C++ source files, or a compiled binary.
     """
-    if debug:
+
+    # parse verbosity
+    if verbosity == 1:
+        log.setLevel(logging.INFO)
+    elif verbosity == 2:
         log.setLevel(logging.DEBUG)
 
     if not target.is_file() and not target.is_dir():
@@ -112,6 +113,10 @@ def analyze(
         log.debug(f"Parsed symbols to explicitly include for analysis {skip_sym}")
     else:
         skip_sym = []
+
+    # check if overlapping symbols
+    if set(skip_sym) & set(include_sym):
+        error(f"Cannot have same symbols in both --include_sym and --skip_sym.")
 
     log.info(f"Running fuzzability analysis on {target}")
     if target.is_file():
@@ -266,13 +271,17 @@ def create_harness(
     out_harness: t.Optional[Path] = typer.Option(
         None, help="Specify to set output harness template file path."
     ),
-    debug: bool = typer.Option(
-        False,
-        help="If set, will be verbose and output debug information.",
+    verbosity: int = typer.Option(
+        0,
+        help="Sets logging level (2 = debug, 1 = info, 0 = output)",
     ),
 ):
     """Synthesize a AFL++/libFuzzer harness for a given symbol in a target."""
-    if debug:
+
+    # parse verbosity
+    if verbosity == 1:
+        log.setLevel(logging.INFO)
+    elif verbosity == 2:
         log.setLevel(logging.DEBUG)
 
     if not symbol_name:
