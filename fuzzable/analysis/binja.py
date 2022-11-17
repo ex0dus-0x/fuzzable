@@ -186,11 +186,12 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
 
     def risky_sinks(self, func: Function) -> int:
         """
-        Find references of every known insecure/risky call, and
+        Find references of known insecure/risky calls, and check to see if there is an
+        argument in the function call that flows into it. Will treat the current function
+        target under an interprocedural analysis.
         """
 
         risky_sinks = 0
-
         visited = []
 
         # visit all other calls with depth-first search until we reach a risky sink

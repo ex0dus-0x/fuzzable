@@ -7,7 +7,6 @@ import typing as t
 
 import angr
 from angr.analyses.reaching_definitions.dep_graph import DepGraph
-from angr.knowledge_plugins.key_definitions.atoms import Atom
 from angr.knowledge_plugins.functions.function import Function
 from angr.procedures.definitions.glibc import _libc_decls
 
@@ -34,18 +33,24 @@ class AngrAnalysis(AnalysisBackend):
         )
 
         log.debug("Doing initial CFG analysis on target")
-        self.cfg = self.target.analyses.CFGFast()
-        _ = self.target.analyses.CompleteCallingConventions(recover_variables=True)
+        self.cfg = self.target.analyses.CFG(
+            resolve_indirect_jumps=True,
+            cross_references=True,
+            force_complete_scan=False,
+            normalize=True,
+            symbols=True,
+        )
 
     def __str__(self) -> str:
         return "angr"
 
     def run(self) -> Fuzzability:
         log.debug("Iterating over functions")
-        for _, func in self.cfg.functions.items():
+        for func in self.cfg.functions.values():
             name = func.name
             addr = str(hex(func.addr))
 
+            # just in case repeats show up again
             if name in self.visited:
                 continue
             self.visited += [name]
@@ -56,7 +61,9 @@ class AngrAnalysis(AnalysisBackend):
                 continue
 
             if not self.include_nontop and not self.is_toplevel_call(func):
-                log.warning(f"Skipping {name} (top-level) from fuzzability analysis.")
+                log.warning(
+                    f"Skipping {name} (not top-level) from fuzzability analysis."
+                )
                 self.skipped[name] = addr
                 continue
 
@@ -115,39 +122,28 @@ class AngrAnalysis(AnalysisBackend):
         return False
 
     def is_toplevel_call(self, target: Function) -> bool:
-        """
-        TODO: make this work with less of a performance downgrade.
-        """
-        cfg_nodes = self.cfg.get_all_nodes(target.addr)
-        if len(cfg_nodes) == 0:
-            return True
-        # return self.cfg.get_predecessors(cfg_nodes[0]) == 0
-        return True
-
-    def risky_sinks(self, func: Function) -> int:
-        """
-        TODO: really slow
-        """
-        log.debug(f"{func.name} - checking for risky sinks")
-
-        target = self.target.kb.functions.function(name=func.name)
-        program_rda = self.target.analyses.ReachingDefinitions(
-            subject=target, dep_graph=DepGraph()
+        return (
+            len(set(target._function_manager.callgraph.predecessors(target.addr))) == 0
         )
 
-        """
-        for sink_name in ["memcpy", "strcpy", ""]:
-            sink_function = self.target.kb.functions.function(name=sink_name)
+    def risky_sinks(self, func: Function) -> int:
+        log.debug(f"{func.name} - checking for risky sinks")
 
-            parameter_position = 1
-            parameter_type = _libc_decls[sink_name].args[parameter_position]
-            parameter_atom = Atom.from_argument(
-                sink_function.calling_convention.arg_locs()[parameter_position],
-                self.target.arch.registers
-            )
-        """
+        risky_sinks = 0
 
-        return len(func.get_call_sites())
+        rd = self.target.analyses.ReachingDefinitions(
+            subject=func,
+            func_graph=func.graph,
+            cc=func.calling_convention,
+            observation_points=[
+                (
+                    "insn",
+                    0,
+                )
+            ],
+            dep_graph=DepGraph(),
+        )
+        return risky_sinks
 
     def get_coverage_depth(self, target: Function) -> int:
         """
