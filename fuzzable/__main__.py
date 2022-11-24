@@ -63,8 +63,7 @@ def analyze(
         help="Comma-seperated list of symbols to absolutely be considered for analysis.",
     ),
     include_nontop: bool = typer.Option(
-        False,
-        help="If set, won't filter out only on top-level function definitions."
+        False, help="If set, won't filter out only on top-level function definitions."
     ),
     skip_sym: t.Optional[str] = typer.Option(
         None, help="Comma-seperated list of symbols to skip during analysis."

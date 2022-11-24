@@ -92,10 +92,9 @@ class AstAnalysis(AnalysisBackend):
         """
         )
 
-        # filter out on all `static` calls, can't be ignored
+        log.debug(f"{filepath} - aggregating and filtering on definition captures")
 
-        # store mappings for the file
-        log.debug(f"{filepath} - aggregating definition captures")
+        # store function definition mappings for the file
         captures = [node for (node, _) in query.captures(tree.root_node)]
         self.parsed_symbols[filepath] = (captures, contents)
 
@@ -149,17 +148,18 @@ class AstAnalysis(AnalysisBackend):
                     continue
                 self.visited += [name]
 
-                log.debug(f"{filename} - checking if we should skip analysis for node")
+                log.debug(f"Checking if we should ignore {name}")
                 if self.skip_analysis(name):
                     self.skipped[name] = path
-                    log.debug(f"{filename} - skipping over this one")
+                    log.warning(f"Skipping {name} from fuzzability analysis.")
                     continue
 
                 # if recommend mode, filter and run only those that are top-level
-                self.is_top_level = self.is_toplevel_call(node)
+                log.debug(f"Checking to see if {name} is a top-level call")
+                self.is_top_level = self.is_toplevel_call(name, node)
                 if not self.include_nontop and not self.is_top_level:
-                    log.debug(
-                        f"{filename} - skipping over node, since it's not top-level for recommended mode"
+                    log.warning(
+                        f"Skipping {name} (not top-level) from fuzzability analysis."
                     )
                     self.skipped[name] = path
                     continue
@@ -185,9 +185,7 @@ class AstAnalysis(AnalysisBackend):
         )
 
     def skip_analysis(self, name: str) -> bool:
-        """
-        WIP
-        """
+        """Handles parsing edge cases that yield weird function nodes"""
         if super().skip_analysis(name):
             return True
 
@@ -201,14 +199,16 @@ class AstAnalysis(AnalysisBackend):
 
         return False
 
-    def is_toplevel_call(self, target: str) -> bool:
+    def is_toplevel_call(self, name: str, node: Node) -> bool:
         """
         Check if node is a callee of any other function nodes, and if not is considered
-        a top level call
-
-        TODO: can this be more performant and pythonic?
+        a top level call.
         """
-        log.debug(f"{target} - checking if toplevel call")
+
+        # ignore if static function
+        # TODO: deal with other edge cases and potential macro aliases
+        if node.children[0].type == "storage_class_specifier":
+            return False
 
         # get call_expressions for each function name
         for _, entry in self.parsed_symbols.items():
@@ -228,7 +228,7 @@ class AstAnalysis(AnalysisBackend):
                     call_name = contents[capture.start_byte : capture.end_byte].decode(
                         "utf8"
                     )
-                    if call_name == target:
+                    if call_name == name:
                         return False
 
         return True
