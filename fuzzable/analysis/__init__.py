@@ -200,8 +200,8 @@ class AnalysisBackend(abc.ABC):
         """
         FUZZABILITY HEURISTIC
 
-        Checks to see if one or more of the function's arguments is
-        potentially user-controlled, and flows into an abusable call.
+        Checks to see if one or more of the function's arguments is potentially user-controlled,
+        and flows into a risky call. Will treat the function under test under an intraprocedural analysis.
         """
         ...
 
