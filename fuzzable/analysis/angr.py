@@ -13,7 +13,6 @@ from angr.procedures.definitions.glibc import _libc_decls
 from pathlib import Path
 
 from . import AnalysisBackend, AnalysisException, Fuzzability, DEFAULT_SCORE_WEIGHTS
-from ..config import RISKY_GLIBC_CALL_PATTERNS
 from ..metrics import CallScore
 from ..log import log
 

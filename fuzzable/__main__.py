@@ -8,7 +8,6 @@ import os
 import logging
 import typing as t
 import typer
-import lief
 
 from rich import print
 
@@ -22,8 +21,27 @@ from fuzzable.log import log
 from pathlib import Path
 
 app = typer.Typer(
-    help="Framework for Automating Fuzzable Target Discovery with Static Analysis"
+    help="Framework for Automating Fuzzable Target Discovery with Static Analysis",
+    no_args_is_help=True,
+    context_settings=dict(help_option_names=["-h", "--help"]),
+    add_completion=False,
 )
+
+
+@app.callback()
+def global_args(
+    verbosity: int = typer.Option(
+        0,
+        "-v",
+        "--verbosity",
+        help="Sets logging level (2 = debug, 1 = info, 0 = output).",
+    ),
+):
+    """Handles global flags for all commands."""
+    if verbosity == 1:
+        log.setLevel(logging.INFO)
+    elif verbosity == 2:
+        log.setLevel(logging.DEBUG)
 
 
 @app.command()
@@ -31,6 +49,8 @@ def analyze(
     target: Path,
     export: t.Optional[Path] = typer.Option(
         None,
+        "-e",
+        "--export",
         help="Export the fuzzability report to a path based on the file extension."
         "Fuzzable supports exporting to `json`, `csv`, or `md`.",
     ),
@@ -43,7 +63,8 @@ def analyze(
         help="Comma-seperated list of symbols to absolutely be considered for analysis.",
     ),
     include_nontop: bool = typer.Option(
-        False, help="If set, won't filter out only on top-level function definitions."
+        False,
+        help="If set, won't filter out only on top-level function definitions."
     ),
     skip_sym: t.Optional[str] = typer.Option(
         None, help="Comma-seperated list of symbols to skip during analysis."
@@ -53,25 +74,20 @@ def analyze(
         help="If set, ignore symbols that are stripped in binary analysis."
         "Will be ignored if fuzzability analysis is done on source code.",
     ),
+    ignore_metrics: bool = typer.Option(
+        True,
+        help="If set, include individual metrics' scores for each function target analyzed.",
+    ),
     score_weights: t.Optional[str] = typer.Option(
         None,
+        "-w",
+        "--score-weights",
         help="Comma-seperated list of reconfigured weights for multi-criteria decision analysis when determining fuzzability.",
-    ),
-    verbosity: int = typer.Option(
-        0,
-        help="Sets logging level (2 = debug, 1 = info, 0 = output)",
     ),
 ):
     """
     Run fuzzable analysis on a single or workspace of C/C++ source files, or a compiled binary.
     """
-
-    # parse verbosity
-    if verbosity == 1:
-        log.setLevel(logging.INFO)
-    elif verbosity == 2:
-        log.setLevel(logging.DEBUG)
-
     if not target.is_file() and not target.is_dir():
         error(f"Target path `{target}` does not exist.")
 
@@ -98,7 +114,7 @@ def analyze(
     if include_sym:
         include_sym = [sym for sym in include_sym.split(",")]
         if len(include_sym) == 0:
-            error(f"--include_sym must include at least one valid function symbol")
+            error(f"--include-sym must include at least one valid function symbol")
 
         log.debug(f"Parsed symbols to explicitly include for analysis {include_sym}")
     else:
@@ -108,7 +124,7 @@ def analyze(
     if skip_sym:
         skip_sym = [sym for sym in skip_sym.split(",")]
         if len(skip_sym) == 0:
-            error(f"--skip_sym must specify a valid function symbol")
+            error(f"--skip-sym must specify a valid function symbol")
 
         log.debug(f"Parsed symbols to explicitly include for analysis {skip_sym}")
     else:
@@ -116,7 +132,7 @@ def analyze(
 
     # check if overlapping symbols
     if set(skip_sym) & set(include_sym):
-        error(f"Cannot have same symbols in both --include_sym and --skip_sym.")
+        error(f"Cannot have same symbols in both --include-sym and --skip-sym.")
 
     log.info(f"Running fuzzability analysis on {target}")
     if target.is_file():
@@ -128,6 +144,7 @@ def analyze(
             include_nontop,
             skip_sym,
             skip_stripped,
+            ignore_metrics,
             score_weights,
         )
     elif target.is_dir():
@@ -139,6 +156,7 @@ def analyze(
             include_nontop,
             skip_sym,
             skip_stripped,
+            ignore_metrics,
             score_weights,
         )
 
@@ -151,6 +169,7 @@ def run_on_file(
     include_nontop: bool,
     skip_sym: t.List[str],
     skip_stripped: bool,
+    ignore_metrics: bool,
     score_weights: t.List[float],
 ) -> None:
     """Runs analysis on a single source code file or binary file."""
@@ -211,7 +230,7 @@ def run_on_file(
 
     log.info(f"Running fuzzable analysis with the {str(analyzer)} analyzer")
     results = analyzer.run()
-    print_table(target, results, analyzer.skipped, list_ignored)
+    print_table(target, results, analyzer.skipped, ignore_metrics, list_ignored)
     if export:
         export_results(export, results)
 
@@ -224,6 +243,7 @@ def run_on_workspace(
     include_nontop: bool,
     skip_sym: t.List[str],
     skip_stripped: bool,  # not used, maybe until we support multiple binaries
+    ignore_metrics: bool,
     score_weights: t.List[float],
 ) -> None:
     """
@@ -252,40 +272,42 @@ def run_on_workspace(
     )
     log.info(f"Running fuzzable analysis with the {str(analyzer)} analyzer")
     results = analyzer.run()
-    print_table(target, results, analyzer.skipped, list_ignored)
+    print_table(target, results, analyzer.skipped, ignore_metrics, list_ignored)
     if export:
         export_results(export, results)
 
 
 @app.command()
 def create_harness(
-    target: str,
+    target: Path,
     symbol_name: str = typer.Option(
-        "",
+        ...,
+        "-n",
+        "--symbol_name",
         help="Names of function symbol to create a fuzzing harness to target. Source not supported yet.",
     ),
     out_so_name: t.Optional[Path] = typer.Option(
         None,
+        "-s",
+        "--out_so_name",
         help="Specify to set output `.so` path of a transformed ELF binary for binary targets.",
     ),
     out_harness: t.Optional[Path] = typer.Option(
-        None, help="Specify to set output harness template file path."
-    ),
-    verbosity: int = typer.Option(
-        0,
-        help="Sets logging level (2 = debug, 1 = info, 0 = output)",
+        None,
+        "-o",
+        "--out_harness",
+        help="Specify to set output harness template file path.",
     ),
 ):
-    """Synthesize a AFL++/libFuzzer harness for a given symbol in a target."""
+    """Synthesize a AFL++/libFuzzer harness for a given symbol in a binary target."""
 
-    # parse verbosity
-    if verbosity == 1:
-        log.setLevel(logging.INFO)
-    elif verbosity == 2:
-        log.setLevel(logging.DEBUG)
+    if not target.is_file():
+        error(f"Target path `{target}` does not exist.")
 
-    if not symbol_name:
-        error("No --symbol-name specified.")
+    try:
+        import lief
+    except (RuntimeError, ModuleNotFoundError, ImportError):
+        error("Could not import LIEF library to parse binary.")
 
     # if a binary, check if executable or library. if executable, use LIEF to
     # copy, export the symbol and transform to shared object.
@@ -296,7 +318,6 @@ def create_harness(
         )
 
     # resolve paths appropriately
-    target = Path(target)
     if out_so_name:
         out_so_name = out_so_name.expanduser()
 

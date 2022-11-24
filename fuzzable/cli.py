@@ -8,6 +8,7 @@ import json
 import typer
 import typing as t
 
+from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -34,14 +35,25 @@ def error(string: str) -> None:
     sys.exit(1)
 
 
-def generate_table(target: Path, fuzzability: Fuzzability):
+def generate_table(target: Path, fuzzability: Fuzzability, ignore_metrics: bool):
     """Create a table from fuzzability results"""
-    table = Table(title=f"\nFuzzable Report for Target `{target}`")
-    for column in [metric.friendly_name for metric in METRICS]:
+    table = Table(
+        title=f"Fuzzable Report for Target `{target}`",
+        expand=True,
+        safe_box=True,
+    )
+
+    # iterate over each field if flag is set, otherwise only first 3 pieces of info
+    if not ignore_metrics:
+        miter = METRICS
+    else:
+        miter = METRICS[0:3]
+
+    for column in [metric.friendly_name for metric in miter]:
         table.add_column(column, style="magenta")
 
     for row in fuzzability:
-        row_args = [str(getattr(row, metric.identifier)) for metric in METRICS]
+        row_args = [str(getattr(row, metric.identifier)) for metric in miter]
         table.add_row(*row_args)
 
     return table
@@ -51,15 +63,17 @@ def print_table(
     target: Path,
     fuzzability: Fuzzability,
     skipped: t.Dict[str, str],
+    ignore_metrics: bool,
     list_ignored: bool,
 ) -> None:
     """Pretty-prints fuzzability results for the CLI"""
 
-    table = generate_table(target, fuzzability)
+    table = generate_table(target, fuzzability, ignore_metrics)
 
     console = Console(record=True)
     rprint = console.print
 
+    rprint("\n")
     rprint(table)
     rprint("\n[bold red]ADDITIONAL METADATA[/bold red]\n")
     rprint(f"[underline]Number of Symbols Analyzed[/underline]: \t\t{len(fuzzability)}")
@@ -69,7 +83,7 @@ def print_table(
     if list_ignored:
         rprint("\n[bold red]SKIPPED SYMBOLS[/bold red]\n")
         for name, loc in skipped.items():
-            rprint(f"{name}\t\t{loc}")
+            rprint(f"* {name} ({loc})")
         rprint("\n")
 
 
