@@ -13,6 +13,7 @@ from angr.procedures.definitions.glibc import _libc_decls
 from pathlib import Path
 
 from . import AnalysisBackend, AnalysisException, Fuzzability, DEFAULT_SCORE_WEIGHTS
+from ..config import RISKY_GLIBC_CALL_PATTERNS
 from ..metrics import CallScore
 from ..log import log
 
@@ -129,20 +130,39 @@ class AngrAnalysis(AnalysisBackend):
     def risky_sinks(self, func: Function) -> int:
         log.debug(f"{func.name} - checking for risky sinks")
 
-        risky_sinks = 0
-
-        rd = self.target.analyses.ReachingDefinitions(
-            subject=func,
-            func_graph=func.graph,
-            cc=func.calling_convention,
-            observation_points=[
-                (
-                    "insn",
-                    0,
-                )
-            ],
-            dep_graph=DepGraph(),
+        """
+        # TODO: do an interprocedural analysis starting from the function
+        func_cfg = self.target.analyses.CFGFast(
+            start_at_entry=False,
+            function_starts=[func.addr]
         )
+        """
+
+        risky_sinks = 0
+        for cs in func.get_call_sites():
+            insn = func.get_call_target(cs)
+            call_site = self.cfg.kb.functions.function(addr=insn)
+
+            # TODO: should we traverse further if not a imported func
+            if AngrAnalysis._is_risky_call(call_site.name):
+                risky_sinks += 1
+
+            """
+            rd = self.target.analyses.ReachingDefinitions(
+                subject=func,
+                func_graph=func.graph,
+                cc=func.calling_convention,
+                observation_points=[
+                    (
+                        "insn",
+                        insn,
+                        0,
+                    )
+                ],
+                dep_graph=DepGraph(),
+            )
+            """
+
         return risky_sinks
 
     def get_coverage_depth(self, target: Function) -> int:
