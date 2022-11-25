@@ -56,6 +56,75 @@ class AstAnalysis(AnalysisBackend):
     def __str__(self) -> str:
         return "tree-sitter"
 
+    def run(self) -> Fuzzability:
+        """
+        This runs on two passes:
+
+            - an initial run to parse and map every single function AST object
+            from the source codebase to their appropriate files
+            - the actual run to conduct static analysis on each function's AST
+        """
+
+        # first collect ASTs for every function
+        log.info("Collecting and parsing ASTs for each function call")
+        for filename in self.target:
+            self._parse_symbols(filename)
+
+        # now analyze each function_definition node
+        log.info("Statically analyzing and calculating fuzzability for each call")
+        for filename, entry in self.parsed_symbols.items():
+            nodes = entry[0]
+            contents = entry[1]
+            for node in nodes:
+                path = f"{filename}:{node.start_point[0]}"
+
+                log.debug(
+                    f"Attempting to capture function symbol name for the current node AST at {path}"
+                )
+                query = self.language.query(
+                    """
+                (identifier) @capture
+                """
+                )
+
+                # TODO make this query better, match more specifically
+                try:
+                    identifier = query.captures(node)[0][0]
+                    name = contents[identifier.start_byte : identifier.end_byte].decode(
+                        "utf8"
+                    )
+                except Exception as err:
+                    log.warning(
+                        f"Parsing failed for {node} in {filename}, reason: {err}"
+                    )
+                    self.skipped[name] = path
+                    continue
+
+                if name in self.visited:
+                    log.debug(f"{node} - already analyzed previously")
+                    continue
+                self.visited += [name]
+
+                log.debug(f"Checking if we should ignore {name}")
+                if self.skip_analysis(name):
+                    self.skipped[name] = path
+                    log.warning(f"Skipping {name} from fuzzability analysis.")
+                    continue
+
+                log.debug(f"Checking to see if {name} is a top-level call")
+                self.is_top_level = self.is_toplevel_call(name, node)
+                if not self.include_nontop and not self.is_top_level:
+                    log.warning(
+                        f"Skipping {name} (not top-level) from fuzzability analysis."
+                    )
+                    self.skipped[name] = path
+                    continue
+
+                log.info(f"Starting analysis for function {name}")
+                self.scores += [self.analyze_call(name, node, filename, contents)]
+
+        return super()._rank_fuzzability(self.scores)
+
     def _parse_symbols(self, filename: Path) -> None:
         """Helper to recover all function implementations from a source target"""
 
@@ -98,77 +167,6 @@ class AstAnalysis(AnalysisBackend):
         captures = [node for (node, _) in query.captures(tree.root_node)]
         self.parsed_symbols[filepath] = (captures, contents)
 
-    def run(self) -> Fuzzability:
-        """
-        This runs on two passes:
-
-            - an initial run to parse and map every single function AST object
-            from the source codebase to their appropriate files
-            - the actual run to conduct static analysis on each function's AST
-        """
-
-        # first collect ASTs for every function
-        log.info("Collecting and parsing ASTs for each function call")
-        for filename in self.target:
-            self._parse_symbols(filename)
-
-        # now analyze each function_definition node
-        log.info("Statically analyzing and calculating fuzzability for each call")
-        for filename, entry in self.parsed_symbols.items():
-            nodes = entry[0]
-            contents = entry[1]
-            for node in nodes:
-                path = f"{filename}:{node.start_point[0]}"
-
-                # first, parse out name to see if we should visit again
-                log.debug(
-                    f"{filename} - attempting to capture function symbol name for the current node AST"
-                )
-                query = self.language.query(
-                    """
-                (identifier) @capture
-                """
-                )
-
-                # TODO make this query better, match more specifically
-                try:
-                    identifier = query.captures(node)[0][0]
-                    name = contents[identifier.start_byte : identifier.end_byte].decode(
-                        "utf8"
-                    )
-                except Exception as err:
-                    log.warning(
-                        f"{filename} - parsing failed for {node}, reason: {err}"
-                    )
-                    self.skipped[name] = path
-                    continue
-
-                if name in self.visited:
-                    log.debug(f"{node} - already analyzed previously")
-                    continue
-                self.visited += [name]
-
-                log.debug(f"Checking if we should ignore {name}")
-                if self.skip_analysis(name):
-                    self.skipped[name] = path
-                    log.warning(f"Skipping {name} from fuzzability analysis.")
-                    continue
-
-                # if recommend mode, filter and run only those that are top-level
-                log.debug(f"Checking to see if {name} is a top-level call")
-                self.is_top_level = self.is_toplevel_call(name, node)
-                if not self.include_nontop and not self.is_top_level:
-                    log.warning(
-                        f"Skipping {name} (not top-level) from fuzzability analysis."
-                    )
-                    self.skipped[name] = path
-                    continue
-
-                log.debug(f"{filename} - analyzing function target {name}")
-                self.scores += [self.analyze_call(name, node, filename, contents)]
-
-        return super()._rank_fuzzability(self.scores)
-
     def analyze_call(
         self, name: str, func: Node, filename: str, contents: bytes
     ) -> CallScore:
@@ -201,8 +199,8 @@ class AstAnalysis(AnalysisBackend):
 
     def is_toplevel_call(self, name: str, node: Node) -> bool:
         """
-        Check if node is a callee of any other function nodes, and if not is considered
-        a top level call.
+        Function implementation should not be static, and has no parent
+        callers.
         """
 
         # ignore if static function

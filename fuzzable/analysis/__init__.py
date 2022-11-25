@@ -77,7 +77,7 @@ class AnalysisBackend(abc.ABC):
         After analyzing each function call, use scikit-criteria to rank based on the call score
         using a simple weighted-sum model.
 
-        This should be the tail call for run(), as it produces the finalized results
+        This should be the tail call for run(), as it produces the finalized results.
         """
 
         # sanity-check number of symbols parsed out
@@ -131,7 +131,7 @@ class AnalysisBackend(abc.ABC):
 
     @staticmethod
     def _rank_simple_fuzzability(unranked: t.List[CallScore]) -> Fuzzability:
-        """Not used anymore."""
+        """Deprecated."""
         return sorted(unranked, key=lambda obj: obj.simple_fuzzability, reverse=True)
 
     @staticmethod
@@ -181,6 +181,14 @@ class AnalysisBackend(abc.ABC):
 
         return False
 
+    @abc.abstractmethod
+    def is_toplevel_call(self, target: t.Any) -> bool:
+        """
+        Checks to see if the function is top-level, aka is not invoked by any other function
+        in the current binary/codebase context.
+        """
+        ...
+
     @staticmethod
     def is_fuzz_friendly(symbol_name: str) -> int:
         """
@@ -193,14 +201,6 @@ class AnalysisBackend(abc.ABC):
         return [
             pattern in symbol_name.lower() for pattern in INTERESTING_PATTERNS
         ].count(True)
-
-    @abc.abstractmethod
-    def is_toplevel_call(self, target: t.Any) -> bool:
-        """
-        Checks to see if the function is top-level, aka is not invoked by any other function
-        in the current binary/codebase context.
-        """
-        ...
 
     @abc.abstractmethod
     def risky_sinks(self, func: t.Any) -> int:

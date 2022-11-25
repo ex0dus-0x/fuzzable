@@ -69,7 +69,7 @@ class AngrAnalysis(AnalysisBackend):
                 self.skipped[name] = addr
                 continue
 
-            log.info(f"Conducting fuzzability analysis on function symbol '{name}'")
+            log.info(f"Starting analysis for function {name}")
             score = self.analyze_call(name, func)
             self.scores += [score]
 
