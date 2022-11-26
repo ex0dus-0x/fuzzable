@@ -74,10 +74,10 @@ You can now analyze binaries and/or source code with the tool!
 
 ```
 # analyzing a single shared object library binary
-$ fuzzable analyze examples/binaries/libsimple.so.1
+$ fuzzable analyze examples/binaries/libbasic.so
 
 # analyzing a single C source file
-$ fuzzable analyze examples/source/libsimple.c
+$ fuzzable analyze examples/source/libbasic.c
 
 # analyzing a workspace with multiple C/C++ files and headers
 $ fuzzable analyze examples/source/source_bundle/
@@ -116,7 +116,7 @@ Every targets you want to analyze is diverse, and __fuzzable__ will not be able 
 $ fuzzable analyze <TARGET> --score-weights=0.2,0.2,0.2,0.2,0.2
 ```
 
-### Analysis Mode
+### Analysis Filtering
 
 By default, __fuzzable__ will filter out function targets based on the following criteria:
 
@@ -127,19 +127,23 @@ By default, __fuzzable__ will filter out function targets based on the following
 To see calls that got filtered out by __fuzzable__, set the `--list_ignored` flag:
 
 ```
-$ fuzzable analyze --list_ignored <TARGET>
+$ fuzzable analyze --list-ignored <TARGET>
 ```
 
 In Binary Ninja, you can turn this setting in `Settings > Fuzzable > List Ignored Calls`.
 
-In the case that __fuzzable__ falsely filters out important calls that should be analyzed, it is recommended
-to switching to the more comprehensive _ranking_ mode, where all calls will be considered for analysis indiscriminately. This can be turned on as such:
+In the case that __fuzzable__ falsely filters out important calls that should be analyzed, it is recommended to use `--include-*` arguments
+to include them during the run:
 
 ```
-$ fuzzable analyze --mode=rank <TARGET>
+# include ALL non top-level calls that were filtered out
+$ fuzzable analyze --include-nontop <TARGET>
+
+# include specific symbols that were filtered out
+$ fuzzable analyze --include-sym <SYM> <TARGET>
 ```
 
-In Binary Ninja, this is supported by selecting `Plugins > Fuzzable > Analysis Mode > Rank all Functions by Fuzzability`.
+In Binary Ninja, this is supported through `Settings > Fuzzable > Include non-top level calls` and `Symbols to Exclude`.
 
 ### Harness Generation
 

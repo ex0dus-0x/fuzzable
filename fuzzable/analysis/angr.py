@@ -13,7 +13,6 @@ from angr.procedures.definitions.glibc import _libc_decls
 from pathlib import Path
 
 from . import AnalysisBackend, AnalysisException, Fuzzability, DEFAULT_SCORE_WEIGHTS
-from ..config import RISKY_GLIBC_CALL_PATTERNS
 from ..metrics import CallScore
 from ..log import log
 
@@ -56,11 +55,13 @@ class AngrAnalysis(AnalysisBackend):
                 continue
             self.visited += [name]
 
+            log.debug(f"Checking if we should ignore {name}")
             if self.skip_analysis(func):
                 log.warning(f"Skipping {name} from fuzzability analysis.")
                 self.skipped[name] = addr
                 continue
 
+            log.debug(f"Checking to see if {name} is a top-level call")
             if not self.include_nontop and not self.is_toplevel_call(func):
                 log.warning(
                     f"Skipping {name} (not top-level) from fuzzability analysis."
@@ -68,7 +69,7 @@ class AngrAnalysis(AnalysisBackend):
                 self.skipped[name] = addr
                 continue
 
-            log.info(f"Conducting fuzzability analysis on function symbol '{name}'")
+            log.info(f"Starting analysis for function {name}")
             score = self.analyze_call(name, func)
             self.scores += [score]
 

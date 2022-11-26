@@ -18,11 +18,9 @@ keywords = ["security", "fuzzing", "vulnerability-research", "binary-analysis"]
 python = "^3.9"
 typer = {extras = ["all"], version = "^0.6.1"}
 angr = "^9.2.8"
-prettytable = "^3.3.0"
 lief = "^0.12.1"
 tree-sitter = "^0.20.0"
 scikit-criteria = "^0.7"
-pypcode = "^1.0.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

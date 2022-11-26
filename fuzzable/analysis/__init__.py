@@ -12,6 +12,7 @@ from skcriteria.madm import simple
 
 from ..metrics import CallScore, METRICS
 from ..config import GLOBAL_IGNORES, INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
+from ..log import log
 
 # Type sig for a finalized list
 Fuzzability = t.OrderedDict[str, CallScore]
@@ -76,9 +77,20 @@ class AnalysisBackend(abc.ABC):
         After analyzing each function call, use scikit-criteria to rank based on the call score
         using a simple weighted-sum model.
 
-        This should be the tail call for run, as it produces the finalized results
+        This should be the tail call for run(), as it produces the finalized results.
         """
 
+        # sanity-check number of symbols parsed out
+        if len(unranked) == 0:
+            raise AnalysisException(
+                "no function targets parsed for fuzzability ranking"
+            )
+        if len(unranked) == 1:
+            raise AnalysisException(
+                "only one function symbol parsed for fuzzability ranking"
+            )
+
+        log.debug("Normalizing static analysis metric values")
         nl_normalized = AnalysisBackend._normalize(
             [score.natural_loops for score in unranked]
         )
@@ -91,23 +103,18 @@ class AnalysisBackend(abc.ABC):
         for score, new_cc in zip(unranked, cc_normalized):
             score.cyclomatic_complexity = new_cc
 
-        # construct our matrix
-        matrix = [score.matrix_row for score in unranked]
-        names = [score.name for score in unranked]
-
-        objectives = [max, max, max, max, max]
+        log.debug("Constructing decision matrix")
         decision_matrix = skc.mkdm(
-            matrix,
-            objectives,
+            [score.matrix_row for score in unranked],
+            [max, max, max, max, max],
             weights=self.score_weights,
-            alternatives=names,
+            alternatives=[score.name for score in unranked],
             criteria=[metric.identifier for metric in METRICS[3:8]],
         )
 
+        log.info("Ranking symbols by fuzzability")
         dec = simple.WeightedSumModel()
         rank = dec.evaluate(decision_matrix)
-
-        # TODO make this better
 
         # finalize CallScores by setting scores and ranks
         scores = rank.e_.score
@@ -124,7 +131,7 @@ class AnalysisBackend(abc.ABC):
 
     @staticmethod
     def _rank_simple_fuzzability(unranked: t.List[CallScore]) -> Fuzzability:
-        """Not used anymore."""
+        """Deprecated."""
         return sorted(unranked, key=lambda obj: obj.simple_fuzzability, reverse=True)
 
     @staticmethod
@@ -174,6 +181,14 @@ class AnalysisBackend(abc.ABC):
 
         return False
 
+    @abc.abstractmethod
+    def is_toplevel_call(self, target: t.Any) -> bool:
+        """
+        Checks to see if the function is top-level, aka is not invoked by any other function
+        in the current binary/codebase context.
+        """
+        ...
+
     @staticmethod
     def is_fuzz_friendly(symbol_name: str) -> int:
         """
@@ -186,14 +201,6 @@ class AnalysisBackend(abc.ABC):
         return [
             pattern in symbol_name.lower() for pattern in INTERESTING_PATTERNS
         ].count(True)
-
-    @abc.abstractmethod
-    def is_toplevel_call(self, target: t.Any) -> bool:
-        """
-        Checks to see if the function is top-level, aka is not invoked by any other function
-        in the current binary/codebase context.
-        """
-        ...
 
     @abc.abstractmethod
     def risky_sinks(self, func: t.Any) -> int:

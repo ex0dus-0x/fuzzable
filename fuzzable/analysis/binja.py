@@ -76,18 +76,19 @@ class BinjaAnalysis(
             # demangle the symbol name
             _, name = demangle.demangle_ms(Architecture["x86_64"], func.name)
             name = demangle.get_qualified_name(name)
-
-            # address location for mapping
             addr = str(hex(func.address_ranges[0].start))
 
             log.log_debug(f"Checking to see if we should ignore {name}")
             if self.skip_analysis(func):
+                log.log_warn(f"Skipping {name} from fuzzability analysis.")
                 self.skipped[name] = addr
                 continue
 
-            # if recommend mode, filter and run only those that are top-level
             log.log_debug(f"Checking to see if {name} is a top-level call")
             if not self.include_nontop and self.is_toplevel_call(func):
+                log.log_warn(
+                    f"Skipping {name} (not top-level) from fuzzability analysis."
+                )
                 self.skipped[name] = addr
                 continue
 

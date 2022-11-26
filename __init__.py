@@ -90,7 +90,7 @@ Settings().register_setting(
 )
 
 PluginCommand.register(
-    "Fuzzable\\Analyze & Rank Function",
+    "Fuzzable\\Analyze & Rank Functions",
     "List out functions we've determined to be the best candidates for fuzzing."
     "This will exclude functions that is determined to not be directly usable for a harness.",
     binja.run_fuzzable,
