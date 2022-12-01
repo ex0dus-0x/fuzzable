@@ -154,14 +154,14 @@ class AstAnalysis(AnalysisBackend):
         tree = self.parser.parse(contents)
         # log.debug(tree.root_node.sexp())
 
-        log.debug(f"{filepath} - grabbing function definitions")
+        log.debug(f"Grabbing function definitions in {filepath}")
         query = self.language.query(
             """
         (function_definition) @capture
         """
         )
 
-        log.debug(f"{filepath} - aggregating and filtering on definition captures")
+        log.debug(f"Aggregating definition captures in {filepath}")
 
         # store function definition mappings for the file
         captures = [node for (node, _) in query.captures(tree.root_node)]
