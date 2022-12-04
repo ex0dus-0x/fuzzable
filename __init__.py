@@ -77,13 +77,13 @@ Settings().register_setting(
 Settings().register_setting(
     "fuzzable.score_weights",
     """
-    {
+    {{
         "title"         : "Override Score Weights",
         "description"   : "Change default score weights for each metric.",
         "type"          : "array",
         "elementType"   : "string",
         "default"       : {}
-    }
+    }}
 """.format(
         DEFAULT_SCORE_WEIGHTS
     ),
