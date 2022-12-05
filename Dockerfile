@@ -11,4 +11,4 @@ RUN python3 -m pip install -U pip
 ADD . /fuzzable
 RUN cd /fuzzable && python3 -m pip install .
 
-CMD ["/bin/bash"]
+CMD ["/bin/sh"]
