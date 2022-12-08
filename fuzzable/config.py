@@ -6,12 +6,72 @@ config.py
 """
 import typing as t
 
+import typer
+
+from dataclasses import dataclass
 from pathlib import Path
 
 
 def get_project_root() -> Path:
     """Utility for getting root directory of this project"""
     return Path(__file__).parent.parent
+
+
+@dataclass
+class AnalysisKnobs:
+    export: t.Optional[Path] = (
+        typer.Option(
+            None,
+            "-e",
+            "--export",
+            help="Export the fuzzability report to a path based on the file extension."
+            "Fuzzable supports exporting to `json`, `csv`, or `md`.",
+        ),
+    )
+    list_ignored: bool = (
+        typer.Option(
+            False,
+            help="If set, will also additionally output and/or export ignored symbols.",
+        ),
+    )
+    include_sym: t.Optional[str] = (
+        typer.Option(
+            None,
+            help="Comma-seperated list of symbols to absolutely be considered for analysis.",
+        ),
+    )
+    include_nontop: bool = (
+        typer.Option(
+            False,
+            help="If set, won't filter out only on top-level function definitions.",
+        ),
+    )
+    skip_sym: t.Optional[str] = (
+        typer.Option(
+            None, help="Comma-seperated list of symbols to skip during analysis."
+        ),
+    )
+    skip_stripped: bool = (
+        typer.Option(
+            False,
+            help="If set, ignore symbols that are stripped in binary analysis."
+            "Will be ignored if fuzzability analysis is done on source code.",
+        ),
+    )
+    ignore_metrics: bool = (
+        typer.Option(
+            True,
+            help="If set, include individual metrics' scores for each function target analyzed.",
+        ),
+    )
+    score_weights: t.Optional[str] = (
+        typer.Option(
+            None,
+            "-w",
+            "--score-weights",
+            help="Comma-seperated list of reconfigured weights for multi-criteria decision analysis when determining fuzzability.",
+        ),
+    )
 
 
 # Supported C/C++ source code extensions

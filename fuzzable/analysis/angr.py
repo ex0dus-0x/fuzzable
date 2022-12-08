@@ -61,7 +61,7 @@ class AngrAnalysis(AnalysisBackend):
                 self.skipped[name] = addr
                 continue
 
-            log.debug(f"Checking to see if {name} is a top-level call")
+            log.debug(f"Checking if {name} is a top-level call")
             if not self.include_nontop and not self.is_toplevel_call(func):
                 log.warning(
                     f"Skipping {name} (not top-level) from fuzzability analysis."

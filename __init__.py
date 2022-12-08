@@ -4,20 +4,46 @@ __init__.py
 
     Plugin module used for Binary Ninja
 """
+import dataclasses
+
 from binaryninja.plugin import PluginCommand
 from binaryninja.settings import Settings
 
 from .fuzzable.analysis import binja, DEFAULT_SCORE_WEIGHTS
+from .fuzzable.config import AnalysisKnobs
 
 # TODO register settings from a config of analysis flags
+for field in dataclasses.fields(AnalysisKnobs):
+    Settings().register_setting(
+        f"fuzzable.{field.name}",
+        """
+        {{
+            "title"         : "{title}",
+            "description"   : "{description}",
+            "type":         : "{type}",
+            "default":      : "
+        }}
+""".format()
+    )
 
 Settings().register_group("fuzzable", "Fuzzable")
+Settings().register_setting(
+    "fuzzable.list_ignored",
+    """
+    {
+        "title"         : "List Ignored Symbols",
+        "description"   : "If set, will also additionally output and/or export ignored symbols.",
+        "type"          : "boolean",
+        "default"       : false
+    }
+""",
+)
 Settings().register_setting(
     "fuzzable.include_sym",
     """
     {
         "title"         : "Symbols to Include",
-        "description"   : "Include symbols that are accidentally ignored to be considered for analysis.",
+        "description"   : "Comma-seperated list of symbols to absolutely be considered for analysis.",
         "type"          : "array",
         "elementType"   : "string",
         "default"       : []
@@ -42,7 +68,7 @@ Settings().register_setting(
     """
     {
         "title"         : "Symbols to Exclude",
-        "description"   : "Exclude symbols from being considered for analaysis.",
+        "description"   : "Exclude symbols from being considered for analysis.",
         "type"          : "array",
         "elementType"   : "string",
         "default"       : []
@@ -63,13 +89,13 @@ Settings().register_setting(
 )
 
 Settings().register_setting(
-    "fuzzable.list_ignored",
+    "fuzzable.ignore_metrics",
     """
     {
-        "title"         : "List Ignored Symbols",
-        "description"   : "Include the symbols that we've ignored using `recommend` mode.",
+        "title"         : "Ignoring Displaying Metrics",
+        "description"   : "If set, include individual metrics' scores for each function target analyzed.",
         "type"          : "boolean",
-        "default"       : false
+        "default"       : true
     }
 """,
 )

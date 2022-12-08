@@ -5,11 +5,14 @@ binja.py
     registered plugin handlers, and through a headless standalone CLI.
 
 """
+import dataclasses
 import os
+import json
 import typing as t
 import lief
 
 from pathlib import Path
+from threading import Lock
 
 import binaryninja
 import binaryninja.log as log
@@ -24,9 +27,12 @@ from binaryninja.enums import LowLevelILOperation, SymbolType
 from binaryninja.plugin import BackgroundTaskThread
 from binaryninja.settings import Settings
 
-from .. import generate
+from .. import generate, cli
 from . import AnalysisBackend, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore, METRICS
+
+MUTEX = Lock()
+CURRENT_RANKED: t.Optional[Fuzzability] = None
 
 
 class _BinjaAnalysisMeta(type(AnalysisBackend), type(BackgroundTaskThread)):
@@ -78,13 +84,13 @@ class BinjaAnalysis(
             name = demangle.get_qualified_name(name)
             addr = str(hex(func.address_ranges[0].start))
 
-            log.log_debug(f"Checking to see if we should ignore {name}")
+            log.log_debug(f"Checking if we should ignore {name}")
             if self.skip_analysis(func):
                 log.log_warn(f"Skipping {name} from fuzzability analysis.")
                 self.skipped[name] = addr
                 continue
 
-            log.log_debug(f"Checking to see if {name} is a top-level call")
+            log.log_debug(f"Checking if {name} is a top-level call")
             if not self.include_nontop and self.is_toplevel_call(func):
                 log.log_warn(
                     f"Skipping {name} (not top-level) from fuzzability analysis."
@@ -101,10 +107,17 @@ class BinjaAnalysis(
 
         # if headless, handle displaying results back
         if not self.headless:
-            csv_result = ",".join([metric.identifier for metric in METRICS])
+            return self._display_report(ranked)
+        else:
+            return ranked
 
-            columns = [metric.friendly_name for metric in METRICS]
-            csv_result = ", ".join([f'"{column}"' for column in columns])
+    def _display_report(self, ranked: Fuzzability) -> None:
+        """Helper to generate markdown report and create separate display"""
+        MUTEX.acquire()
+        try:
+
+            # after successful analysis save/overwrite state first
+            CURRENT_RANKED = ranked
 
             # TODO: reuse rich for markdown
             markdown_result = f"""# Fuzzable Targets
@@ -112,33 +125,31 @@ class BinjaAnalysis(
 This is a generated report that ranks fuzzability of every parsed symbol that was recovered in this binary. If you feel that the results
 are incomplete, wait for Binary Ninja's initial analysis to finalize and re-run this feature in the plugin.
 
-__Number of Symbols Analyzed:__ {len(ranked)}
+__Number of Symbols Analyzed:__ {len(CURRENT_RANKED)}
 
 __Number of Symbols Skipped:__ {len(self.skipped)}
 
-__Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].name})
+__Top Fuzzing Contender:__ [{CURRENT_RANKED[0].name}](binaryninja://?expr={CURRENT_RANKED[0].name})
 
 ## Ranked Table (MODE = {self.mode.name})
 
 | Function Signature | Location          | Fuzzability Score | Fuzz-Friendly Name | Risky Data Sinks | Natural Loops | Cyclomatic Complexity | Coverage Depth |
 |--------------------|-------------------|-------------------|--------------------|------------------|---------------|-----------------------|----------------|
 """
-            for score in ranked:
+            for score in CURRENT_RANKED:
                 markdown_result += score.binja_markdown_row
-                csv_result += score.csv_row
 
-            # if set include list of ignored symbols
-            if Settings().get_bool("fuzzable.list_ignored"):
-                markdown_result += "\n## Ignored Symbols\n"
-                for name, loc in self.skipped.items():
-                    markdown_result += f"* [{name}](binaryninja://?expr={loc})"
+        finally:
+            MUTEX.release()
 
-            log.log_info("Saving to memory and displaying finalized results...")
-            self.view.store_metadata("csv", csv_result)
-            self.view.show_markdown_report("Fuzzable targets", markdown_result)
-            return None
+        # if set include list of ignored symbols
+        if Settings().get_bool("fuzzable.list_ignored"):
+            markdown_result += "\n## Ignored Symbols\n"
+            for name, loc in self.skipped.items():
+                markdown_result += f"* [{name}](binaryninja://?expr={loc})"
 
-        return ranked
+        log.log_info("Displaying finalized results...")
+        self.view.show_markdown_report("Fuzzable targets", markdown_result)
 
     def analyze_call(self, name: str, func: Function) -> CallScore:
         stripped = "sub_" in name
@@ -298,46 +309,67 @@ def run_fuzzable(view) -> None:
     task.start()
 
 
-def run_export_csv(view: BinaryView) -> None:
+def run_export_csv(_: BinaryView) -> None:
     """Generate a CSV report from a previous analysis"""
     log.log_info("Attempting to export results to CSV")
+
+    MUTEX.acquire()
     try:
-        csv_output = view.query_metadata("csv")
-    except KeyError:
-        interaction.show_message_box(
-            "Error", "Cannot export without running an analysis first."
-        )
-        return
+        if CURRENT_RANKED is None:
+            interaction.show_message_box(
+                "Error", "Cannot export without running an analysis first."
+            )
+            return
+
+        ranked = CURRENT_RANKED
+    finally:
+        MUTEX.release()
 
     csv_file = interaction.get_save_filename_input("Filename to export as CSV?", "csv")
     csv_file = csv_file.decode("utf-8") + ".csv"
 
+    log.log_debug(f"Generating CSV output from ranked functions")
+
+    columns = [metric.friendly_name for metric in METRICS]
+    csv_result = ",".join([metric.identifier for metric in METRICS])
+    csv_result = ", ".join([f'"{column}"' for column in columns])
+    for score in ranked:
+        csv_result += score.csv_row
+
     log.log_info(f"Writing to filepath {csv_file}")
     with open(csv_file, "w+", encoding="utf-8") as csv_fd:
-        csv_fd.write(csv_output)
+        csv_fd.write(csv_result)
 
     interaction.show_message_box("Success", f"Done, exported to {csv_file}")
 
 
-def run_export_json(view: BinaryView) -> None:
+def run_export_json(_: BinaryView) -> None:
     """Generate a JSON report from a previous analysis"""
     log.log_info("Attempting to export results to JSON")
+
+    MUTEX.acquire()
     try:
-        json_output = view.query_metadata("json")
-    except KeyError:
-        interaction.show_message_box(
-            "Error", "Cannot export without running an analysis first."
-        )
-        return
+        if CURRENT_RANKED is None:
+            interaction.show_message_box(
+                "Error", "Cannot export without running an analysis first."
+            )
+            return
+
+        ranked = CURRENT_RANKED
+    finally:
+        MUTEX.release()
 
     json_file = interaction.get_save_filename_input(
         "Filename to export as JSON?", "json"
     )
-    json_file = json_file.decode("utf-8") + ".csv"
+    json_file = json_file.decode("utf-8") + ".json"
+
+    log.log_debug(f"Generating JSON output from ranked functions")
+    json_result = json.dumps([dataclasses.asdict(score) for score in ranked])
 
     log.log_info(f"Writing to filepath {json_file}")
     with open(json_file, "w+", encoding="utf-8") as json_fd:
-        json_fd.write(json_output)
+        json_fd.write(json_result)
 
     interaction.show_message_box("Success", f"Done, exported to {json_file}")
 

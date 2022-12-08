@@ -111,7 +111,7 @@ class AstAnalysis(AnalysisBackend):
                     log.warning(f"Skipping {name} from fuzzability analysis.")
                     continue
 
-                log.debug(f"Checking to see if {name} is a top-level call")
+                log.debug(f"Checking if {name} is a top-level call")
                 self.is_top_level = self.is_toplevel_call(name, node)
                 if not self.include_nontop and not self.is_top_level:
                     log.warning(
