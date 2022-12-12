@@ -23,7 +23,7 @@ for field in dataclasses.fields(AnalysisKnobs):
             "type":         : "{type}",
             "default":      : "
         }}
-""".format()
+""".format(),
     )
 
 Settings().register_group("fuzzable", "Fuzzable")
