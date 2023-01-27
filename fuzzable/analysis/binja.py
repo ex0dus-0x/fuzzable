@@ -373,7 +373,13 @@ def _export_interaction(contents: t.Any, extension: str) -> None:
     """Helper to grab filename input and write output to filesystem."""
 
     path = interaction.get_save_filename_input("Filename to export as?", extension)
-    path = path + "." + extension
+    if path:
+        path = path + "." + extension
+    else:
+        interaction.show_message_box(
+            "Error", "Did not get required path name for export."
+        )
+        return
 
     # parse out template based on executable format, and start replacing
     with open(path, "w+", encoding="utf-8") as file:
@@ -406,13 +412,21 @@ def run_harness_generation(view, func: Function) -> None:
     harness = interaction.get_save_filename_input(
         "Harness path to write to?", "cpp", ""
     )
-    harness = harness + ".cpp"
+    if harness:
+        harness = harness + ".cpp"
+    else:
+        interaction.show_message_box(
+            "Error", "Did not get required C/C++ harness path."
+        )
+        return
 
     log.log_debug("Getting override shared object to write to")
     override_path = interaction.get_save_filename_input(
         "New shared object to write to?", "so", ""
     )
-    override_path = override_path + ".so"
+
+    if override_path:
+        override_path = override_path + ".so"
 
     log.log_info("Generating harness from template")
     shared_obj = generate.transform_elf_to_so(Path(path), binary, symbol, override_path)
