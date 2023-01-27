@@ -1,6 +1,6 @@
 [[package]]
 name = "ailment"
-version = "9.2.28"
+version = "9.2.35"
 description = "The angr intermediate language."
 category = "main"
 optional = false
@@ -8,20 +8,20 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "angr"
-version = "9.2.28"
+version = "9.2.35"
 description = "A multi-architecture binary analysis toolkit, with the ability to perform dynamic symbolic execution and various static analyses on binaries"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [package.dependencies]
-ailment = "9.2.28"
-archinfo = "9.2.28"
+ailment = "9.2.35"
+archinfo = "9.2.35"
 cachetools = "*"
 capstone = ">=3.0.5rc2,<5.0.0rc2 || >5.0.0rc2"
 cffi = ">=1.14.0"
-claripy = "9.2.28"
-cle = "9.2.28"
+claripy = "9.2.35"
+cle = "9.2.35"
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 CppHeaderParser = "*"
 dpkt = "*"
@@ -34,19 +34,19 @@ progressbar2 = ">=3"
 protobuf = ">=3.19.0"
 psutil = "*"
 pycparser = ">=2.18"
-pyvex = "9.2.28"
+pyvex = "9.2.35"
 rpyc = "*"
 sortedcontainers = "*"
 sympy = "*"
-unicorn = ">=2.0.1,<=2.0.1.post1"
+unicorn = "2.0.1.post1"
 
 [package.extras]
 angrdb = ["sqlalchemy"]
-pcode = ["pypcode (==1.0.5)"]
+pcode = ["pypcode (==1.1.1)"]
 
 [[package]]
 name = "archinfo"
-version = "9.2.28"
+version = "9.2.35"
 description = "Classes with architecture-specific information useful to other projects."
 category = "main"
 optional = false
@@ -54,7 +54,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "astroid"
-version = "2.12.13"
+version = "2.13.3"
 description = "An abstract syntax tree for Python with inference support."
 category = "dev"
 optional = false
@@ -62,7 +62,7 @@ python-versions = ">=3.7.2"
 
 [package.dependencies]
 lazy-object-proxy = ">=1.4.0"
-typing-extensions = {version = ">=3.10", markers = "python_version < \"3.10\""}
+typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.11\""}
 wrapt = [
     {version = ">=1.11,<2", markers = "python_version < \"3.11\""},
     {version = ">=1.14,<2", markers = "python_version >= \"3.11\""},
@@ -70,17 +70,19 @@ wrapt = [
 
 [[package]]
 name = "attrs"
-version = "22.1.0"
+version = "22.2.0"
 description = "Classes Without Boilerplate"
 category = "dev"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.6"
 
 [package.extras]
-dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "mypy (>=0.900,!=0.940)", "pytest-mypy-plugins", "zope.interface", "furo", "sphinx", "sphinx-notfound-page", "pre-commit", "cloudpickle"]
-docs = ["furo", "sphinx", "zope.interface", "sphinx-notfound-page"]
-tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "mypy (>=0.900,!=0.940)", "pytest-mypy-plugins", "zope.interface", "cloudpickle"]
-tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "mypy (>=0.900,!=0.940)", "pytest-mypy-plugins", "cloudpickle"]
+cov = ["attrs", "coverage-enable-subprocess", "coverage[toml] (>=5.3)"]
+dev = ["attrs"]
+docs = ["furo", "sphinx", "myst-parser", "zope.interface", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier"]
+tests = ["attrs", "zope.interface"]
+tests-no-zope = ["hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist", "cloudpickle", "mypy (>=0.971,<0.990)", "pytest-mypy-plugins"]
+tests_no_zope = ["hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist", "cloudpickle", "mypy (>=0.971,<0.990)", "pytest-mypy-plugins"]
 
 [[package]]
 name = "backoff"
@@ -122,7 +124,7 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "cachetools"
-version = "5.2.0"
+version = "5.3.0"
 description = "Extensible memoizing collections and decorators"
 category = "main"
 optional = false
@@ -157,18 +159,15 @@ pycparser = "*"
 
 [[package]]
 name = "charset-normalizer"
-version = "2.1.1"
+version = "3.0.1"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
 category = "dev"
 optional = false
-python-versions = ">=3.6.0"
-
-[package.extras]
-unicode_backport = ["unicodedata2"]
+python-versions = "*"
 
 [[package]]
 name = "claripy"
-version = "9.2.28"
+version = "9.2.35"
 description = "An abstraction layer for constraint solvers"
 category = "main"
 optional = false
@@ -177,15 +176,15 @@ python-versions = ">=3.8"
 [package.dependencies]
 cachetools = "*"
 decorator = "*"
-pysmt = ">=0.9.1.dev119"
+pysmt = ">=0.9.5"
 z3-solver = "4.10.2.0"
 
 [package.extras]
-cvc4-solver = ["cvc4-solver"]
+cvc4_solver = ["cvc4-solver"]
 
 [[package]]
 name = "cle"
-version = "9.2.28"
+version = "9.2.35"
 description = "|"
 category = "main"
 optional = false
@@ -194,7 +193,7 @@ python-versions = ">=3.8"
 [package.dependencies]
 pefile = "*"
 pyelftools = ">=0.27"
-pyvex = "9.2.28"
+pyvex = "9.2.35"
 sortedcontainers = ">=2.0"
 
 [package.extras]
@@ -235,21 +234,21 @@ test = ["flake8 (==3.7.8)", "hypothesis (==3.55.3)"]
 
 [[package]]
 name = "contourpy"
-version = "1.0.6"
+version = "1.0.7"
 description = "Python library for calculating contours of 2D quadrilateral grids"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.dependencies]
 numpy = ">=1.16"
 
 [package.extras]
-bokeh = ["bokeh", "selenium"]
-docs = ["docutils (<0.18)", "sphinx (<=5.2.0)", "sphinx-rtd-theme"]
-test = ["pytest", "matplotlib", "pillow", "flake8", "isort"]
-test-minimal = ["pytest"]
-test-no-codebase = ["pytest", "matplotlib", "pillow"]
+bokeh = ["bokeh", "chromedriver", "selenium"]
+docs = ["furo", "sphinx-copybutton"]
+mypy = ["contourpy", "docutils-stubs", "mypy (==0.991)", "types-pillow"]
+test = ["matplotlib", "pillow", "pytest"]
+test-no-images = ["pytest"]
 
 [[package]]
 name = "cppheaderparser"
@@ -329,7 +328,7 @@ python-versions = "*"
 
 [[package]]
 name = "exceptiongroup"
-version = "1.0.4"
+version = "1.1.0"
 description = "Backport of PEP 654 (exception groups)"
 category = "dev"
 optional = false
@@ -362,7 +361,7 @@ woff = ["zopfli (>=0.1.4)", "brotlicffi (>=0.8.0)", "brotli (>=1.0.1)"]
 
 [[package]]
 name = "future"
-version = "0.18.2"
+version = "0.18.3"
 description = "Clean single-source support for Python 3 and 2"
 category = "main"
 optional = false
@@ -395,7 +394,7 @@ requests = "*"
 
 [[package]]
 name = "gitpython"
-version = "3.1.29"
+version = "3.1.30"
 description = "GitPython is a python library used to interact with Git repositories"
 category = "main"
 optional = false
@@ -414,24 +413,24 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "iniconfig"
-version = "1.1.1"
-description = "iniconfig: brain-dead simple config-ini parsing"
+version = "2.0.0"
+description = "brain-dead simple config-ini parsing"
 category = "dev"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 
 [[package]]
 name = "isort"
-version = "5.10.1"
+version = "5.11.4"
 description = "A Python utility / library to sort Python imports."
 category = "dev"
 optional = false
-python-versions = ">=3.6.1,<4.0"
+python-versions = ">=3.7.0"
 
 [package.extras]
-pipfile_deprecated_finder = ["pipreqs", "requirementslib"]
-requirements_deprecated_finder = ["pipreqs", "pip-api"]
 colors = ["colorama (>=0.4.3,<0.5.0)"]
+requirements-deprecated-finder = ["pip-api", "pipreqs"]
+pipfile-deprecated-finder = ["pipreqs", "requirementslib"]
 plugins = ["setuptools"]
 
 [[package]]
@@ -466,7 +465,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "lazy-object-proxy"
-version = "1.8.0"
+version = "1.9.0"
 description = "A fast and thorough lazy object proxy."
 category = "dev"
 optional = false
@@ -490,7 +489,7 @@ python-versions = "*"
 
 [[package]]
 name = "lxml"
-version = "4.9.1"
+version = "4.9.2"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
 category = "main"
 optional = false
@@ -504,7 +503,7 @@ source = ["Cython (>=0.29.7)"]
 
 [[package]]
 name = "markupsafe"
-version = "2.1.1"
+version = "2.1.2"
 description = "Safely add untrusted strings to HTML/XML markup."
 category = "main"
 optional = false
@@ -512,7 +511,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "matplotlib"
-version = "3.6.2"
+version = "3.6.3"
 description = "Python plotting package"
 category = "main"
 optional = false
@@ -597,30 +596,30 @@ future = "*"
 
 [[package]]
 name = "networkx"
-version = "2.8.8"
+version = "3.0"
 description = "Python package for creating and manipulating graphs and networks"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [package.extras]
-default = ["numpy (>=1.19)", "scipy (>=1.8)", "matplotlib (>=3.4)", "pandas (>=1.3)"]
-developer = ["pre-commit (>=2.20)", "mypy (>=0.982)"]
-doc = ["sphinx (>=5.2)", "pydata-sphinx-theme (>=0.11)", "sphinx-gallery (>=0.11)", "numpydoc (>=1.5)", "pillow (>=9.2)", "nb2plots (>=0.6)", "texext (>=0.6.6)"]
-extra = ["lxml (>=4.6)", "pygraphviz (>=1.9)", "pydot (>=1.4.2)", "sympy (>=1.10)"]
+default = ["numpy (>=1.20)", "scipy (>=1.8)", "matplotlib (>=3.4)", "pandas (>=1.3)"]
+developer = ["pre-commit (>=2.20)", "mypy (>=0.991)"]
+doc = ["sphinx (==5.2.3)", "pydata-sphinx-theme (>=0.11)", "sphinx-gallery (>=0.11)", "numpydoc (>=1.5)", "pillow (>=9.2)", "nb2plots (>=0.6)", "texext (>=0.6.7)"]
+extra = ["lxml (>=4.6)", "pygraphviz (>=1.10)", "pydot (>=1.4.2)", "sympy (>=1.10)"]
 test = ["pytest (>=7.2)", "pytest-cov (>=4.0)", "codecov (>=2.1)"]
 
 [[package]]
 name = "numpy"
-version = "1.23.5"
-description = "NumPy is the fundamental package for array computing with Python."
+version = "1.24.1"
+description = "Fundamental package for array computing in Python"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [[package]]
 name = "packaging"
-version = "22.0"
+version = "23.0"
 description = "Core utilities for Python packages"
 category = "main"
 optional = false
@@ -628,7 +627,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "pandas"
-version = "1.5.2"
+version = "1.5.3"
 description = "Powerful data structures for data analysis, time series, and statistics"
 category = "main"
 optional = false
@@ -648,7 +647,7 @@ test = ["hypothesis (>=5.5.3)", "pytest (>=6.0)", "pytest-xdist (>=1.31)"]
 
 [[package]]
 name = "pathspec"
-version = "0.10.3"
+version = "0.11.0"
 description = "Utility library for gitignore style pattern matching of file paths."
 category = "dev"
 optional = false
@@ -667,27 +666,27 @@ future = "*"
 
 [[package]]
 name = "pillow"
-version = "9.3.0"
+version = "9.4.0"
 description = "Python Imaging Library (Fork)"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo", "olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-issues (>=3.0.1)", "sphinx-removed-in", "sphinxext-opengraph"]
+docs = ["furo", "olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-inline-tabs", "sphinx-issues (>=3.0.1)", "sphinx-removed-in", "sphinxext-opengraph"]
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
 
 [[package]]
 name = "platformdirs"
-version = "2.6.0"
+version = "2.6.2"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo (>=2022.9.29)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.19.4)", "sphinx (>=5.3)"]
-test = ["appdirs (==1.4.4)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.2)"]
+docs = ["furo (>=2022.12.7)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.19.5)", "sphinx (>=5.3)"]
+test = ["appdirs (==1.4.4)", "covdefaults (>=2.2.2)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.2)"]
 
 [[package]]
 name = "pluggy"
@@ -703,7 +702,7 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "plumbum"
-version = "1.8.0"
+version = "1.8.1"
 description = "Plumbum: shell combinators library"
 category = "main"
 optional = false
@@ -713,8 +712,8 @@ python-versions = ">=3.6"
 pywin32 = {version = "*", markers = "platform_system == \"Windows\" and platform_python_implementation != \"PyPy\""}
 
 [package.extras]
-dev = ["paramiko", "psutil", "pytest (>=6.0)", "pytest-cov", "pytest-mock", "pytest-timeout"]
-docs = ["Sphinx (>=4.0.0)", "sphinx-rtd-theme (>=1.0.0)"]
+dev = ["paramiko", "psutil", "pytest-cov", "pytest-mock", "pytest-timeout", "pytest (>=6.0)"]
+docs = ["sphinx-rtd-theme (>=1.0.0)", "sphinx (>=4.0.0)"]
 ssh = ["paramiko"]
 
 [[package]]
@@ -742,7 +741,7 @@ tests = ["flake8 (>=3.7.7)", "pytest (>=4.6.9)", "pytest-cov (>=2.6.1)", "pytest
 
 [[package]]
 name = "protobuf"
-version = "4.21.11"
+version = "4.21.12"
 description = ""
 category = "main"
 optional = false
@@ -785,7 +784,7 @@ python-versions = "*"
 
 [[package]]
 name = "pygments"
-version = "2.13.0"
+version = "2.14.0"
 description = "Pygments is a syntax highlighting package written in Python."
 category = "main"
 optional = false
@@ -796,7 +795,7 @@ plugins = ["importlib-metadata"]
 
 [[package]]
 name = "pylint"
-version = "2.15.8"
+version = "2.15.10"
 description = "python code static checker"
 category = "dev"
 optional = false
@@ -805,7 +804,10 @@ python-versions = ">=3.7.2"
 [package.dependencies]
 astroid = ">=2.12.13,<=2.14.0-dev0"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
-dill = ">=0.2"
+dill = [
+    {version = ">=0.2", markers = "python_version < \"3.11\""},
+    {version = ">=0.3.6", markers = "python_version >= \"3.11\""},
+]
 isort = ">=4.2.5,<6"
 mccabe = ">=0.6,<0.8"
 platformdirs = ">=2.2.0"
@@ -830,19 +832,22 @@ diagrams = ["railroad-diagrams", "jinja2"]
 
 [[package]]
 name = "pyquery"
-version = "1.4.3"
+version = "2.0.0"
 description = "A jquery-like library for python"
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
-cssselect = ">0.7.9"
+cssselect = ">=1.2.0"
 lxml = ">=2.1"
+
+[package.extras]
+test = ["requests", "webob", "webtest", "pytest", "pytest-cov"]
 
 [[package]]
 name = "pysmt"
-version = "0.9.6.dev21"
+version = "0.9.5"
 description = "A solver-agnostic library for SMT Formulae manipulation and solving"
 category = "main"
 optional = false
@@ -850,7 +855,7 @@ python-versions = "*"
 
 [[package]]
 name = "pytest"
-version = "7.2.0"
+version = "7.2.1"
 description = "pytest: simple powerful testing with Python"
 category = "dev"
 optional = false
@@ -894,7 +899,7 @@ tests = ["flake8", "pytest", "pytest-cov", "pytest-mypy", "pytest-asyncio", "sph
 
 [[package]]
 name = "pytz"
-version = "2022.6"
+version = "2022.7.1"
 description = "World timezone definitions, modern and historical"
 category = "main"
 optional = false
@@ -902,14 +907,14 @@ python-versions = "*"
 
 [[package]]
 name = "pyvex"
-version = "9.2.28"
+version = "9.2.35"
 description = "A Python interface to libVEX and VEX IR"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [package.dependencies]
-archinfo = "9.2.28"
+archinfo = "9.2.35"
 bitstring = "*"
 cffi = {version = ">=1.0.3", markers = "implementation_name == \"cpython\""}
 
@@ -923,7 +928,7 @@ python-versions = "*"
 
 [[package]]
 name = "requests"
-version = "2.28.1"
+version = "2.28.2"
 description = "Python HTTP for Humans."
 category = "dev"
 optional = false
@@ -931,7 +936,7 @@ python-versions = ">=3.7, <4"
 
 [package.dependencies]
 certifi = ">=2017.4.17"
-charset-normalizer = ">=2,<3"
+charset-normalizer = ">=2,<4"
 idna = ">=2.5,<4"
 urllib3 = ">=1.21.1,<1.27"
 
@@ -950,6 +955,7 @@ python-versions = ">=3.6.3,<4.0.0"
 [package.dependencies]
 commonmark = ">=0.9.0,<0.10.0"
 pygments = ">=2.6.0,<3.0.0"
+typing-extensions = {version = ">=4.0.0,<5.0", markers = "python_version < \"3.9\""}
 
 [package.extras]
 jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
@@ -1002,7 +1008,7 @@ dev = ["mypy", "typing-extensions", "pycodestyle", "flake8"]
 
 [[package]]
 name = "seaborn"
-version = "0.12.1"
+version = "0.12.2"
 description = "Statistical data visualization"
 category = "main"
 optional = false
@@ -1010,17 +1016,17 @@ python-versions = ">=3.7"
 
 [package.dependencies]
 matplotlib = ">=3.1,<3.6.1 || >3.6.1"
-numpy = ">=1.17"
+numpy = ">=1.17,<1.24.0 || >1.24.0"
 pandas = ">=0.25"
 
 [package.extras]
-dev = ["pytest", "pytest-cov", "pytest-xdist", "flake8", "mypy", "pandas-stubs", "pre-commit"]
+dev = ["pytest", "pytest-cov", "pytest-xdist", "flake8", "mypy", "pandas-stubs", "pre-commit", "flit"]
 docs = ["numpydoc", "nbconvert", "ipykernel", "sphinx-copybutton", "sphinx-issues", "sphinx-design", "pyyaml", "pydata_sphinx_theme (==0.10.0rc2)"]
 stats = ["scipy (>=1.3)", "statsmodels (>=0.10)"]
 
 [[package]]
 name = "setuptools-scm"
-version = "7.0.5"
+version = "7.1.0"
 description = "the blessed package to manage your versions by scm tags"
 category = "main"
 optional = false
@@ -1028,7 +1034,7 @@ python-versions = ">=3.7"
 
 [package.dependencies]
 packaging = ">=20.0"
-tomli = ">=1.0.0"
+tomli = {version = ">=1.0.0", markers = "python_version < \"3.11\""}
 typing-extensions = "*"
 
 [package.extras]
@@ -1037,11 +1043,11 @@ toml = ["setuptools (>=42)"]
 
 [[package]]
 name = "shellingham"
-version = "1.5.0"
+version = "1.5.0.post1"
 description = "Tool to Detect Surrounding Shell"
 category = "main"
 optional = false
-python-versions = ">=3.4"
+python-versions = ">=3.7"
 
 [[package]]
 name = "six"
@@ -1140,7 +1146,7 @@ python-versions = "*"
 
 [[package]]
 name = "urllib3"
-version = "1.26.13"
+version = "1.26.14"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 category = "dev"
 optional = false
@@ -1169,8 +1175,8 @@ python-versions = "*"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.9"
-content-hash = "5a22d18bf748a4993eca71e5ae8a1bd5e17dfd5f8eb546c5ba5fb7a09ca14025"
+python-versions = "^3.8"
+content-hash = "4bc479c98cb8454158750032b085a5f890dd45c90c6337672b3f0797acc9d83b"
 
 [metadata.files]
 ailment = []
