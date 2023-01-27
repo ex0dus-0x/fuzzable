@@ -15,7 +15,7 @@ documentation = "https://github.com/ex0dus-0x/fuzzable/wiki"
 keywords = ["security", "fuzzing", "vulnerability-research", "binary-analysis"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
 typer = {extras = ["all"], version = "^0.6.1"}
 angr = "^9.2.8"
 lief = "^0.12.1"
