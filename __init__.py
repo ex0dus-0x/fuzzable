@@ -13,18 +13,6 @@ from .fuzzable.analysis import binja, DEFAULT_SCORE_WEIGHTS
 from .fuzzable.config import AnalysisKnobs
 
 # TODO register settings from a config of analysis flags
-for field in dataclasses.fields(AnalysisKnobs):
-    Settings().register_setting(
-        f"fuzzable.{field.name}",
-        """
-        {{
-            "title"         : "{title}",
-            "description"   : "{description}",
-            "type":         : "{type}",
-            "default":      : "
-        }}
-""".format(),
-    )
 
 Settings().register_group("fuzzable", "Fuzzable")
 Settings().register_setting(
@@ -116,7 +104,7 @@ Settings().register_setting(
 )
 
 PluginCommand.register(
-    "Fuzzable\\Analyze & Rank Functions",
+    "Fuzzable\\Analyze and Rank Functions",
     "List out functions we've determined to be the best candidates for fuzzing."
     "This will exclude functions that is determined to not be directly usable for a harness.",
     binja.run_fuzzable,

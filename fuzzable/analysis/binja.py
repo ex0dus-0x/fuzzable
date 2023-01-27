@@ -8,19 +8,18 @@ binja.py
 import dataclasses
 import os
 import json
+import pickle
 import typing as t
 import lief
 
 from pathlib import Path
-from threading import Lock
 
 import binaryninja
-import binaryninja.log as log
 import binaryninja.interaction as interaction
 import binaryninja.demangle as demangle
 
 from binaryninja import BinaryView
-from binaryninja.architecture import Architecture
+from binaryninja.log import Logger
 from binaryninja.function import Function
 from binaryninja.lowlevelil import LowLevelILReg
 from binaryninja.enums import LowLevelILOperation, SymbolType
@@ -28,11 +27,10 @@ from binaryninja.plugin import BackgroundTaskThread
 from binaryninja.settings import Settings
 
 from .. import generate
-from . import AnalysisBackend, Fuzzability, DEFAULT_SCORE_WEIGHTS
+from . import AnalysisBackend, Fuzzability, DEFAULT_SCORE_WEIGHTS, BASIC_FUZZABLE_ERROR
 from ..metrics import CallScore, METRICS
 
-MUTEX = Lock()
-CURRENT_RANKED: t.Optional[Fuzzability] = None
+log = Logger(0, "Fuzzable")
 
 
 class _BinjaAnalysisMeta(type(AnalysisBackend), type(BackgroundTaskThread)):
@@ -73,6 +71,12 @@ class BinjaAnalysis(
         return "Binary Ninja"
 
     def run(self) -> t.Optional[Fuzzability]:
+
+        # interaction box before running to signal MCDA library is not available.
+        # not needed for CLI since traditional logging will display the warning
+        if BASIC_FUZZABLE_ERROR:
+            interaction.show_message_box("Warning", BASIC_FUZZABLE_ERROR)
+
         self.view.update_analysis_and_wait()
         funcs = self.view.functions
 
@@ -80,8 +84,7 @@ class BinjaAnalysis(
         for func in funcs:
 
             # demangle the symbol name
-            _, name = demangle.demangle_ms(Architecture["x86_64"], func.name)
-            name = demangle.get_qualified_name(name)
+            name = demangle.simplify_name_to_string(func.name)
             addr = str(hex(func.address_ranges[0].start))
 
             log.log_debug(f"Checking if we should ignore {name}")
@@ -91,7 +94,7 @@ class BinjaAnalysis(
                 continue
 
             log.log_debug(f"Checking if {name} is a top-level call")
-            if not self.include_nontop and self.is_toplevel_call(func):
+            if not self.include_nontop and not self.is_toplevel_call(func):
                 log.log_warn(
                     f"Skipping {name} (not top-level) from fuzzability analysis."
                 )
@@ -113,37 +116,32 @@ class BinjaAnalysis(
 
     def _display_report(self, ranked: Fuzzability) -> None:
         """Helper to generate markdown report and create separate display"""
-        MUTEX.acquire()
-        try:
 
-            # after successful analysis save/overwrite state first
-            CURRENT_RANKED = ranked
+        # after successful analysis save/overwrite state first
+        self.view.store_metadata("ranked", pickle.dumps(ranked))
 
-            # TODO: reuse rich for markdown
-            markdown_result = f"""# Fuzzable Targets
+        # TODO: reuse rich for markdown
+        markdown_result = f"""# Fuzzable Targets
 
 This is a generated report that ranks fuzzability of every parsed symbol that was recovered in this binary. If you feel that the results
 are incomplete, wait for Binary Ninja's initial analysis to finalize and re-run this feature in the plugin.
 
-__Number of Symbols Analyzed:__ {len(CURRENT_RANKED)}
+__Number of Symbols Analyzed:__ {len(ranked)}
 
 __Number of Symbols Skipped:__ {len(self.skipped)}
 
-__Top Fuzzing Contender:__ [{CURRENT_RANKED[0].name}](binaryninja://?expr={CURRENT_RANKED[0].name})
+__Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].name})
 
-## Ranked Table (MODE = {self.mode.name})
+## Ranked Functions
 
 | Function Signature | Location          | Fuzzability Score | Fuzz-Friendly Name | Risky Data Sinks | Natural Loops | Cyclomatic Complexity | Coverage Depth |
 |--------------------|-------------------|-------------------|--------------------|------------------|---------------|-----------------------|----------------|
 """
-            for score in CURRENT_RANKED:
-                markdown_result += score.binja_markdown_row
+        for score in ranked:
+            markdown_result += score.binja_markdown_row
 
-            # save metadata string for potential exporting
-            self.view.save_metadata("string", markdown_result)
-
-        finally:
-            MUTEX.release()
+        # save metadata string for potential exporting
+        self.view.store_metadata("string", markdown_result)
 
         # if set include list of ignored symbols
         if Settings().get_bool("fuzzable.list_ignored"):
@@ -299,15 +297,17 @@ __Top Fuzzing Contender:__ [{CURRENT_RANKED[0].name}](binaryninja://?expr={CURRE
         return num_edges - num_blocks + 2
 
 
-def run_fuzzable(view) -> None:
+def run_fuzzable(view: BinaryView) -> None:
+    """Run analysis with default or globally configured fuzzable settings."""
+
     settings = Settings()
     task = BinjaAnalysis(
         view,
-        include_sym=settings.get_array("fuzzable.include_sym"),
+        include_sym=settings.get_string_list("fuzzable.include_sym"),
         include_nontop=settings.get_bool("fuzzable.include_nontop"),
-        skip_sym=settings.get_array("fuzzable.skip_sym"),
+        skip_sym=settings.get_string_list("fuzzable.skip_sym"),
         skip_stripped=settings.get_bool("fuzzable.skip_stripped"),
-        score_weights=settings.get_array("fuzzable.score_weights"),
+        score_weights=settings.get_string_list("fuzzable.score_weights"),
     )
     task.start()
 
@@ -316,19 +316,15 @@ def analysis_first(cb: t.Callable):
     """Decorator to ensure export functionality doesn't run without analysis first."""
 
     def inner(view: BinaryView):
-        MUTEX.acquire()
         try:
-            if CURRENT_RANKED is None:
-                interaction.show_message_box(
-                    "Error", "Cannot export without running an analysis first."
-                )
-                return
+            ranked = view.query_metadata("ranked")
+        except KeyError:
+            interaction.show_message_box(
+                "Error", "Cannot export without running an analysis first."
+            )
+            return
 
-            ranked = CURRENT_RANKED
-        finally:
-            MUTEX.release()
-
-        return cb(view, ranked)
+        return cb(view, pickle.loads(ranked))
 
     return inner
 
@@ -340,8 +336,8 @@ def run_export_csv(_: BinaryView, ranked: Fuzzability) -> None:
     log.log_debug(f"Generating CSV output from ranked functions")
 
     columns = [metric.friendly_name for metric in METRICS]
-    csv_result = ",".join([metric.identifier for metric in METRICS])
-    csv_result = ", ".join([f'"{column}"' for column in columns])
+    csv_result = ",".join([f'"{column}"' for column in columns])
+    csv_result += "\n"
     for score in ranked:
         csv_result += score.csv_row
 
@@ -377,7 +373,7 @@ def _export_interaction(contents: t.Any, extension: str) -> None:
     """Helper to grab filename input and write output to filesystem."""
 
     path = interaction.get_save_filename_input("Filename to export as?", extension)
-    path = path.decode("utf-8") + "." + extension
+    path = path + "." + extension
 
     # parse out template based on executable format, and start replacing
     with open(path, "w+", encoding="utf-8") as file:
@@ -398,21 +394,28 @@ def run_harness_generation(view, func: Function) -> None:
     path = view.file.filename
     binary = lief.parse(path)
 
+    # if stripped, get the address instead as the symbol
     symbol = func.name
+    if "sub_" in symbol:
+        symbol = hex(func.address_ranges[0].start)
+
     params: t.List[str] = [f"{param.type}" for param in func.parameter_vars.vars]
     return_type = str(func.return_type)
 
     log.log_debug("Getting filename to write to")
-    harness = interaction.get_save_filename_input("Path to write to?", "cpp", "")
+    harness = interaction.get_save_filename_input(
+        "Harness path to write to?", "cpp", ""
+    )
     harness = harness + ".cpp"
 
+    log.log_debug("Getting override shared object to write to")
+    override_path = interaction.get_save_filename_input(
+        "New shared object to write to?", "so", ""
+    )
+    override_path = override_path + ".so"
+
     log.log_info("Generating harness from template")
-
-    # if stripped, get the address instead as the symbol
-    if "sub_" in symbol:
-        symbol = hex(func.address_ranges[0].start)
-
-    shared_obj = generate.transform_elf_to_so(Path(path), binary, symbol)
+    shared_obj = generate.transform_elf_to_so(Path(path), binary, symbol, override_path)
     generate.generate_harness(
         shared_obj,
         symbol,

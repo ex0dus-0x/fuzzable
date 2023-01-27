@@ -140,7 +140,7 @@ class CallScore:
     @property
     def csv_row(self) -> str:
         """Generate a CSV row for exporting to file"""
-        return f"{self.name}, {self.loc}, {self.stripped}, {self.fuzz_friendly}, {self.risky_sinks}, {self.natural_loops}, {self.cyclomatic_complexity}, {self.coverage_depth}, {self.score}\n"
+        return f"{self.name},{self.loc},{self.stripped},{self.fuzz_friendly},{self.risky_sinks},{self.natural_loops},{self.cyclomatic_complexity},{self.coverage_depth},{self.score}\n"
 
     @functools.cached_property
     def simple_fuzzability(self) -> int:

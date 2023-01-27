@@ -7,12 +7,15 @@ __init__.py
 import abc
 import typing as t
 
+# skc has dep problems (e.g in numpy). Set a flag that can be reused to warn the user that
+# the module is not used, and a basic fuzzability calculation will be performed instead.
+BASIC_FUZZABLE_ERROR: t.Optional[str] = None
 try:
     import skcriteria as skc
     from skcriteria.madm import simple
-except ImportError:
-    print("WARNING: skcriteria could not be loaded properly. Skipping.")
-    pass
+except ImportError as err:
+    BASIC_FUZZABLE_ERROR = f"Cannot import scikit-criteria, using basic ranking method instead. Reason: {repr(err)}"
+
 
 from ..metrics import CallScore, METRICS
 from ..config import GLOBAL_IGNORES, INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
@@ -71,8 +74,6 @@ class AnalysisBackend(abc.ABC):
     def run(self) -> Fuzzability:
         """
         Determine the fuzzability of each function in the binary or source targets.
-        If the mode to recommend targets, determine and statically analyze only top-level calls.
-        If the mode is to rank targets, iterate and analyze over all calls and rank.
         """
         ...
 
@@ -93,6 +94,10 @@ class AnalysisBackend(abc.ABC):
             raise AnalysisException(
                 "only one function symbol parsed for fuzzability ranking"
             )
+
+        if BASIC_FUZZABLE_ERROR:
+            log.warning(BASIC_FUZZABLE_ERROR)
+            return AnalysisBackend._rank_simple_fuzzability(unranked)
 
         log.debug("Normalizing static analysis metric values")
         nl_normalized = AnalysisBackend._normalize(
@@ -120,7 +125,7 @@ class AnalysisBackend(abc.ABC):
         dec = simple.WeightedSumModel()
         rank = dec.evaluate(decision_matrix)
 
-        # finalize CallScores by setting scores and ranks
+        log.debug("Finalizing CallScores by setting calculated scores and ranks")
         scores = rank.e_.score
         ranks = list(rank.rank_)
         new_unranked = []
@@ -129,13 +134,13 @@ class AnalysisBackend(abc.ABC):
             entry.score = score
             new_unranked += [entry]
 
-        # can sort our unranked list appropriately now
+        log.debug("Sorting finalized list by ranks")
         sorted_results = [y for _, y in sorted(zip(ranks, new_unranked))]
         return sorted_results
 
     @staticmethod
     def _rank_simple_fuzzability(unranked: t.List[CallScore]) -> Fuzzability:
-        """Deprecated."""
+        """To be deprecated."""
         return sorted(unranked, key=lambda obj: obj.simple_fuzzability, reverse=True)
 
     @staticmethod
