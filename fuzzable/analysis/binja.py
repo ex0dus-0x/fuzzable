@@ -27,7 +27,7 @@ from binaryninja.enums import LowLevelILOperation, SymbolType
 from binaryninja.plugin import BackgroundTaskThread
 from binaryninja.settings import Settings
 
-from .. import generate, cli
+from .. import generate
 from . import AnalysisBackend, Fuzzability, DEFAULT_SCORE_WEIGHTS
 from ..metrics import CallScore, METRICS
 
@@ -138,6 +138,9 @@ __Top Fuzzing Contender:__ [{CURRENT_RANKED[0].name}](binaryninja://?expr={CURRE
 """
             for score in CURRENT_RANKED:
                 markdown_result += score.binja_markdown_row
+
+            # save metadata string for potential exporting
+            self.view.save_metadata("string", markdown_result)
 
         finally:
             MUTEX.release()
@@ -309,24 +312,30 @@ def run_fuzzable(view) -> None:
     task.start()
 
 
-def run_export_csv(_: BinaryView) -> None:
+def analysis_first(cb: t.Callable):
+    """Decorator to ensure export functionality doesn't run without analysis first."""
+
+    def inner(view: BinaryView):
+        MUTEX.acquire()
+        try:
+            if CURRENT_RANKED is None:
+                interaction.show_message_box(
+                    "Error", "Cannot export without running an analysis first."
+                )
+                return
+
+            ranked = CURRENT_RANKED
+        finally:
+            MUTEX.release()
+
+        return cb(view, ranked)
+
+    return inner
+
+
+@analysis_first
+def run_export_csv(_: BinaryView, ranked: Fuzzability) -> None:
     """Generate a CSV report from a previous analysis"""
-    log.log_info("Attempting to export results to CSV")
-
-    MUTEX.acquire()
-    try:
-        if CURRENT_RANKED is None:
-            interaction.show_message_box(
-                "Error", "Cannot export without running an analysis first."
-            )
-            return
-
-        ranked = CURRENT_RANKED
-    finally:
-        MUTEX.release()
-
-    csv_file = interaction.get_save_filename_input("Filename to export as CSV?", "csv")
-    csv_file = csv_file.decode("utf-8") + ".csv"
 
     log.log_debug(f"Generating CSV output from ranked functions")
 
@@ -336,63 +345,45 @@ def run_export_csv(_: BinaryView) -> None:
     for score in ranked:
         csv_result += score.csv_row
 
-    log.log_info(f"Writing to filepath {csv_file}")
-    with open(csv_file, "w+", encoding="utf-8") as csv_fd:
-        csv_fd.write(csv_result)
-
-    interaction.show_message_box("Success", f"Done, exported to {csv_file}")
+    _export_interaction(csv_result, "csv")
 
 
-def run_export_json(_: BinaryView) -> None:
+@analysis_first
+def run_export_json(_: BinaryView, ranked: Fuzzability) -> None:
     """Generate a JSON report from a previous analysis"""
-    log.log_info("Attempting to export results to JSON")
-
-    MUTEX.acquire()
-    try:
-        if CURRENT_RANKED is None:
-            interaction.show_message_box(
-                "Error", "Cannot export without running an analysis first."
-            )
-            return
-
-        ranked = CURRENT_RANKED
-    finally:
-        MUTEX.release()
-
-    json_file = interaction.get_save_filename_input(
-        "Filename to export as JSON?", "json"
-    )
-    json_file = json_file.decode("utf-8") + ".json"
 
     log.log_debug(f"Generating JSON output from ranked functions")
     json_result = json.dumps([dataclasses.asdict(score) for score in ranked])
 
-    log.log_info(f"Writing to filepath {json_file}")
-    with open(json_file, "w+", encoding="utf-8") as json_fd:
-        json_fd.write(json_result)
-
-    interaction.show_message_box("Success", f"Done, exported to {json_file}")
+    _export_interaction(json_result, "json")
 
 
-def run_export_md(view: BinaryView) -> None:
+@analysis_first
+def run_export_md(view: BinaryView, _: Fuzzability) -> None:
     """Generate a markdown report from a previous analysis"""
-    log.log_info("Attempting to export results to markdown")
+
+    log.log_debug(f"Grabbing cached markdown report for export")
     try:
         markdown_output = view.query_metadata("md")
     except KeyError:
         interaction.show_message_box(
             "Error", "Cannot export without running an analysis first."
         )
-        return
 
-    md_file = interaction.get_save_filename_input("Filename to export as CSV?", "csv")
-    md_file = md_file.decode("utf-8") + ".md"
+    _export_interaction(markdown_output, "md")
+
+
+def _export_interaction(contents: t.Any, extension: str) -> None:
+    """Helper to grab filename input and write output to filesystem."""
+
+    path = interaction.get_save_filename_input("Filename to export as?", extension)
+    path = path.decode("utf-8") + "." + extension
 
     # parse out template based on executable format, and start replacing
-    with open(md_file, "w+", encoding="utf-8") as mkdown:
-        mkdown.write(markdown_output)
+    with open(path, "w+", encoding="utf-8") as file:
+        file.write(contents)
 
-    interaction.show_message_box("Success", f"Done, exported to {md_file}")
+    interaction.show_message_box("Success", f"Done, exported to {path}")
 
 
 def run_harness_generation(view, func: Function) -> None:

@@ -7,8 +7,12 @@ __init__.py
 import abc
 import typing as t
 
-import skcriteria as skc
-from skcriteria.madm import simple
+try:
+    import skcriteria as skc
+    from skcriteria.madm import simple
+except ImportError:
+    print("WARNING: skcriteria could not be loaded properly. Skipping.")
+    pass
 
 from ..metrics import CallScore, METRICS
 from ..config import GLOBAL_IGNORES, INTERESTING_PATTERNS, RISKY_GLIBC_CALL_PATTERNS
