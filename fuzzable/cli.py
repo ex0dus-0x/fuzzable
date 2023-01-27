@@ -8,7 +8,6 @@ import json
 import typer
 import typing as t
 
-from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -16,6 +15,7 @@ from .analysis import Fuzzability, CallScore
 from .metrics import METRICS
 from .log import log
 
+from io import StringIO
 from pathlib import Path
 
 ERROR_START = typer.style(
@@ -65,14 +65,19 @@ def print_table(
     skipped: t.Dict[str, str],
     ignore_metrics: bool,
     list_ignored: bool,
+    table_export: bool = False,  # set by binja or another disassembler
 ) -> None:
     """Pretty-prints fuzzability results for the CLI"""
 
     table = generate_table(target, fuzzability, ignore_metrics)
 
-    console = Console(record=True)
-    rprint = console.print
+    # console output is in-memory if table_export
+    if table_export:
+        console = Console(file=StringIO())
+    else:
+        console = Console(record=True)
 
+    rprint = console.print
     rprint("\n")
     rprint(table)
     rprint("\n[bold red]ADDITIONAL METADATA[/bold red]\n")
@@ -85,6 +90,12 @@ def print_table(
         for name, loc in skipped.items():
             rprint(f"* {name} ({loc})")
         rprint("\n")
+
+    # if argument is set, return the captured output
+    if table_export:
+        return console.file.getvalue()
+    else:
+        return None
 
 
 def export_results(export: Path, results: t.List[CallScore]) -> None:
