@@ -310,7 +310,7 @@ def create_harness(
 
     # if a binary, check if executable or library. if executable, use LIEF to
     # copy, export the symbol and transform to shared object.
-    binary = lief.parse(target)
+    binary = lief.parse(str(target))
     if binary is None:
         error(
             "Wrong filetype, or does not support synthesizing harnesses for C/C++ source code yet."
