@@ -178,7 +178,6 @@ class AngrAnalysis(AnalysisBackend):
         # for those as well, adding to the callgraph until we're done with all
         callstack = [target]
         while callstack:
-
             # increase depth as we finish iterating over callees for another func
             func = callstack.pop()
             depth += 1

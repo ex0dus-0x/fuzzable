@@ -183,7 +183,6 @@ def run_on_file(
             score_weights=score_weights,
         )
     else:
-
         # Prioritize loading binja as a backend, this will not
         # work if the license is personal/student.
         try:

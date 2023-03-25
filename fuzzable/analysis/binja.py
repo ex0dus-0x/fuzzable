@@ -71,7 +71,6 @@ class BinjaAnalysis(
         return "Binary Ninja"
 
     def run(self) -> t.Optional[Fuzzability]:
-
         # interaction box before running to signal MCDA library is not available.
         # not needed for CLI since traditional logging will display the warning
         if BASIC_FUZZABLE_ERROR:
@@ -82,7 +81,6 @@ class BinjaAnalysis(
 
         log.log_info(f"Starting fuzzable analysis over {len(funcs)} symbols in binary")
         for func in funcs:
-
             # demangle the symbol name
             name = demangle.simplify_name_to_string(func.name)
             addr = str(hex(func.address_ranges[0].start))
@@ -214,7 +212,6 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
 
             # Iterate over each argument and check for taint sinks
             for arg in func.parameter_vars:
-
                 # if arg.type != "char*":
                 #    continue
 
@@ -233,7 +230,6 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
                         LowLevelILOperation.LLIL_CALL,
                         LowLevelILOperation.LLIL_JUMP,
                     ]:
-
                         # TODO deal with registers with addrs
                         if isinstance(insn.dest, LowLevelILReg):
                             continue
@@ -268,14 +264,12 @@ __Top Fuzzing Contender:__ [{ranked[0].name}](binaryninja://?expr={ranked[0].nam
         # for those as well, adding to the callgraph until we're done with all
         callstack = [target]
         while callstack:
-
             # increase depth as we finish iterating over callees for another func
             func = callstack.pop()
             depth += 1
 
             # add all childs to callgraph, and add those we haven't recursed into callstack
             for child in func.callees:
-
                 # ignore recursive calls
                 if child.name == target.name:
                     continue
