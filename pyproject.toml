@@ -1,63 +1,69 @@
-[tool.poetry]
+[project]
 name = "fuzzable"
-version = "2.0.6"
-description = "Framework for Automating Fuzzable Target Discovery with Static Analysis"
+version = "2.1.0"
+description = "Fuzz Target Discovery and Harnesser Tool"
 authors = [
-    "ex0dus <ex0dus@codemuch.tech>"
+    { name = "ex0dus", email = "ex0dus@codemuch.tech" },
 ]
-license = "MIT"
+license = { text = "MIT" }
 readme = "README.md"
-
-homepage = "https://codemuch.tech/fuzzable"
-repository = "https://github.com/ex0dus-0x/fuzzable"
-documentation = "https://github.com/ex0dus-0x/fuzzable/wiki"
-
+requires-python = ">=3.10"
 keywords = ["security", "fuzzing", "vulnerability-research", "binary-analysis"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
+dependencies = [
+    "click>=8.0.0",
+    "miasm>=0.1.5",
+    "rich>=14.2.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-typer = {extras = ["all"], version = "^0.6.1"}
-angr = "^9.2.8"
-lief = "^0.12.1"
-tree-sitter = "^0.20.0"
-scikit-criteria = "^0.7"
+[project.urls]
+Homepage = "https://codemuch.tech/fuzzable"
+Repository = "https://github.com/ex0dus-0x/fuzzable"
+Documentation = "https://github.com/ex0dus-0x/fuzzable/wiki"
 
-[tool.poetry.dev-dependencies]
-pytest = "^7.1.2"
-black = { version = "^22.6.0", python = "^3.9" }
-mypy = "^0.961"
-pylint = "^2.14.5"
-githubrelease = "^1.5.9"
-GitPython = "^3.1.27"
-
-[tool.poetry.scripts]
+[project.scripts]
 fuzzable = "fuzzable.__main__:app"
 
+[dependency-groups]
+dev = [
+    "githubrelease>=1.5.9",
+    "gitpython>=3.1.45",
+    "mypy>=1.18.2",
+    "pydantic>=2.12.4",
+    "pytest>=9.0.0",
+    "ruff>=0.14.4",
+]
+
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.black]
+[tool.hatch.build.targets.wheel]
+packages = ["fuzzable"]
+
+[tool.ruff]
 line-length = 88
-target_version = ['py39']
-include = '\.pyi?$'
-exclude = '''
+target-version = "py310"
 
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | \.github
-    | _build
-    | buck-out
-    | build
-    | docs
-    | dist
-  )/
-  | Dockerfile
-)
-'''
+[tool.ruff.lint]
+# pyflakes, pycodestyle, isort, pyupgrade, flake8-bugbear, comprehensions
+select = ["E", "F", "I", "UP", "B", "C4"]
+ignore = [
+    "E501", # line length handled by the formatter
+]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["fuzzable"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true

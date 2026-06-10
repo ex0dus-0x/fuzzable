@@ -1,14 +1,26 @@
-FROM ubuntu:20.04
+# syntax=docker/dockerfile:1
+FROM ghcr.io/astral-sh/uv:python3.10-bookworm-slim
 
 LABEL name=fuzzable
 LABEL src="https://github.com/ex0dus-0x/fuzzable"
 
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
-RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get -y install python3 python3-dev python3-pip git wget
-RUN python3 -m pip install -U pip
+WORKDIR /fuzzable
 
-ADD . /fuzzable
-RUN cd /fuzzable && python3 -m pip install .
+# Install dependencies first (cached layer keyed on lockfile)
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
 
-CMD ["/bin/sh"]
+# Install the project itself
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+ENV PATH="/fuzzable/.venv/bin:$PATH"
+
+ENTRYPOINT ["fuzzable"]
+CMD ["--help"]

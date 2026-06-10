@@ -13,54 +13,36 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
       - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install pylint mypy
+        run: uv sync --all-extras --dev
 
-      - name: Black Lint
-        uses: psf/black@stable
+      - name: Ruff format check
+        run: uv run ruff format --check
 
-      - name: Pylint
-        run: pylint --fail-under=8 fuzzable/
+      - name: Ruff lint
+        run: uv run ruff check
 
-      # - name: Mypy static typing
-      #   run: mypy fuzzable/
-  
+      - name: Mypy static typing
+        run: uv run mypy
+
   testing:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Python 3
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: 3.9
+          enable-cache: true
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .
-          pip install pytest
+        run: uv sync --all-extras --dev
 
-      #- name: Run tests with pytest
-      #  run: pytest
-
-  release:
-    runs-on: ubuntu-20.04
-    if: "${{ github.event_name == 'push' }}"
-    steps:
-      - name: Generate releases
-        uses: rymndhng/release-on-push-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          bump_version_scheme: patch
-          tag_prefix: "v"
-          use_github_release_notes: true
-
-      - name: Get outputs
-        run: |
-          echo "Got tag name ${{ steps.release.outputs.tag_name }}"
-          echo "Got release version ${{ steps.release.outputs.version }}"
+      - name: Run tests with pytest
+        run: uv run pytest

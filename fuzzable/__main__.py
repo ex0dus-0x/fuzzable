@@ -1,42 +1,96 @@
 #!/usr/bin/env python3
-"""
-__main__.py
-
-    Command line entry point for launching the standalone CLI executable.
-"""
-import os
+import json
 import logging
+import sys
 import typing as t
-import typer
-
-from rich import print
-
-from fuzzable import generate
-from fuzzable.config import SOURCE_FILE_EXTS
-from fuzzable.cli import print_table, error, export_results
-from fuzzable.analysis import AnalysisBackend, DEFAULT_SCORE_WEIGHTS
-from fuzzable.analysis.ast import AstAnalysis
-from fuzzable.log import log
-
+from io import StringIO
 from pathlib import Path
 
-app = typer.Typer(
-    help="Framework for Automating Fuzzable Target Discovery with Static Analysis",
-    no_args_is_help=True,
+import click
+from rich.console import Console
+from rich.table import Table
+
+from fuzzable.analysis import AnalysisBackend, Fuzzability
+from fuzzable.log import log
+from fuzzable.analysis.metrics import METRIC_IDS, METRICS
+
+ERROR_START = click.style("fuzzable error:", fg="white", bg="red")
+
+
+def error(string: str) -> t.NoReturn:
+    """Pretty-prints an error message and exits"""
+    exception = click.style(string, fg="red")
+    click.echo(f"{ERROR_START} {exception}")
+    sys.exit(1)
+
+
+def print_table(
+    target: Path,
+    fuzzability: Fuzzability,
+    skipped: dict[str, str],
+    ignore_metrics: bool,
+    list_ignored: bool,
+    table_export: bool = False,  # set by binja or another disassembler
+) -> None:
+    """Pretty-prints fuzzability results for the CLI"""
+
+    table = Table(
+        title=f"Fuzzable Report for Target `{target}`",
+        expand=True,
+        safe_box=True,
+    )
+
+    # always show identity + score; include per-feature columns unless suppressed
+    columns = ["Function Signature", "Location", "Fuzzability Score"]
+    feature_columns = [] if ignore_metrics else [f.label for f in METRICS]
+    for column in columns + feature_columns:
+        table.add_column(column, style="magenta")
+
+    for row in fuzzability:
+        cells = [str(row.name), str(row.loc), str(row.score)]
+        if not ignore_metrics:
+            cells += [str(row.features.get(f.id, "")) for f in METRICS]
+        table.add_row(*cells)
+
+    # console output is in-memory if table_export
+    if table_export:
+        console = Console(file=StringIO())
+    else:
+        console = Console(record=True)
+
+    rprint = console.print
+    rprint("\n")
+    rprint(table)
+    rprint("\n[bold red]ADDITIONAL METADATA[/bold red]\n")
+    rprint(f"[underline]Number of Symbols Analyzed[/underline]: \t\t{len(fuzzability)}")
+    rprint(f"[underline]Number of Symbols Skipped[/underline]: \t\t{len(skipped)}")
+    rprint(f"[underline]Top Fuzzing Contender[/underline]: \t\t{fuzzability[0].name}\n")
+
+    if list_ignored:
+        rprint("\n[bold red]SKIPPED SYMBOLS[/bold red]\n")
+        for name, loc in skipped.items():
+            rprint(f"* {name} ({loc})")
+        rprint("\n")
+
+    # if argument is set, return the captured output
+    if table_export:
+        return console.file.getvalue()
+    else:
+        return None
+
+@click.group(
+    help="Fuzz Target Discovery and Harnesser Tool",
     context_settings=dict(help_option_names=["-h", "--help"]),
-    add_completion=False,
+    no_args_is_help=True,
 )
-
-
-@app.callback()
-def global_args(
-    verbosity: int = typer.Option(
-        0,
-        "-v",
-        "--verbosity",
-        help="Sets logging level (2 = debug, 1 = info, 0 = output).",
-    ),
-):
+@click.option(
+    "-v",
+    "--verbosity",
+    default=0,
+    type=int,
+    help="Sets logging level (2 = debug, 1 = info, 0 = output).",
+)
+def app(verbosity: int) -> None:
     """Handles global flags for all commands."""
     if verbosity == 1:
         log.setLevel(logging.INFO)
@@ -45,75 +99,98 @@ def global_args(
 
 
 @app.command()
-def analyze(
+@click.argument("target", type=click.Path(path_type=Path))
+@click.option(
+    "-b",
+    "--backend",
+    "backend",
+    type=click.Choice(["miasm", "ghidra", "binja"]),
+    default="miasm",
+    help="Disassembly backend to help with analysis"
+)
+@click.option(
+    "--list-ignored",
+    is_flag=True,
+    default=False,
+    help="List filtered functions not considered for ranking.",
+)
+@click.option(
+    "--include-sym",
+    default=None,
+    help="Comma-separated list of functions that must be included for ranking.",
+)
+@click.option(
+    "--include-nontop",
+    is_flag=True,
+    default=False,
+    help="Include non-toplevel functions in ranking (these are initial filtered by default).",
+)
+@click.option(
+    "--skip-sym",
+    default=None,
+    help="Comma-seperated list of functions to exclude from ranking.",
+)
+@click.option(
+    "--skip-stripped",
+    is_flag=True,
+    default=False,
+    help="Ignore stripped functions from analysis",
+)
+@click.option(
+    "--ignore-metrics/--no-ignore-metrics",
+    default=True,
+    help="Include individual metrics' scores for each ranked function.",
+)
+@click.option(
+    "-w",
+    "--score-weights",
+    default=None,
+    help="Comma-seperated list of custom metric weights used during MCDA.",
+)
+@click.option(
+    "-j",
+    "--json",
+    is_flag=True,
+    default=False,
+    help="Output rankings in JSON.",
+)
+def rank(
     target: Path,
-    export: t.Optional[Path] = typer.Option(
-        None,
-        "-e",
-        "--export",
-        help="Export the fuzzability report to a path based on the file extension."
-        "Fuzzable supports exporting to `json`, `csv`, or `md`.",
-    ),
-    list_ignored: bool = typer.Option(
-        False,
-        help="If set, will also additionally output and/or export ignored symbols.",
-    ),
-    include_sym: t.Optional[str] = typer.Option(
-        None,
-        help="Comma-seperated list of symbols to absolutely be considered for analysis.",
-    ),
-    include_nontop: bool = typer.Option(
-        False, help="If set, won't filter out only on top-level function definitions."
-    ),
-    skip_sym: t.Optional[str] = typer.Option(
-        None, help="Comma-seperated list of symbols to skip during analysis."
-    ),
-    skip_stripped: bool = typer.Option(
-        False,
-        help="If set, ignore symbols that are stripped in binary analysis."
-        "Will be ignored if fuzzability analysis is done on source code.",
-    ),
-    ignore_metrics: bool = typer.Option(
-        True,
-        help="If set, include individual metrics' scores for each function target analyzed.",
-    ),
-    score_weights: t.Optional[str] = typer.Option(
-        None,
-        "-w",
-        "--score-weights",
-        help="Comma-seperated list of reconfigured weights for multi-criteria decision analysis when determining fuzzability.",
-    ),
+    backend: str,
+    list_ignored: bool,
+    include_sym: str | None,
+    include_nontop: bool,
+    skip_sym: str | None,
+    skip_stripped: bool,
+    ignore_metrics: bool,
+    score_weights: str | None,
+    json: bool,
 ):
     """
-    Run fuzzable analysis on a single or workspace of C/C++ source files, or a compiled binary.
+    Rank the best fuzzable target functions on a target binary.
     """
     if not target.is_file() and not target.is_dir():
         error(f"Target path `{target}` does not exist.")
 
-    # parse custom weights and run checks
+    # parse custom weights and run checks; when omitted, leave as None so the
+    # ranker derives objective entropy weights from the analyzed functions.
     if score_weights:
         log.debug("Reconfiguring score weights for MCDA")
         score_weights = [float(weight) for weight in score_weights.split(",")]
-        num_weights = len(DEFAULT_SCORE_WEIGHTS)
+        num_weights = len(METRIC_IDS)
         if len(score_weights) != num_weights:
             error(f"--score-weights must contain {num_weights}")
 
         if sum(score_weights) != 1.0:
-            error(f"--score-weights must sum up to 1.0")
+            error("--score-weights must sum up to 1.0")
     else:
-        score_weights = DEFAULT_SCORE_WEIGHTS
-
-    # export file format checking
-    if export is not None:
-        ext = export.suffix.lower()[1:]
-        if ext not in ["json", "csv", "md"]:
-            error("--export value must either have `json`, `csv`, or `md` extensions.")
+        score_weights = None
 
     # parse symbols to explicitly include for analysis
     if include_sym:
         include_sym = [sym for sym in include_sym.split(",")]
         if len(include_sym) == 0:
-            error(f"--include-sym must include at least one valid function symbol")
+            error("--include-sym must include at least one valid function symbol")
 
         log.debug(f"Parsed symbols to explicitly include for analysis {include_sym}")
     else:
@@ -123,7 +200,7 @@ def analyze(
     if skip_sym:
         skip_sym = [sym for sym in skip_sym.split(",")]
         if len(skip_sym) == 0:
-            error(f"--skip-sym must specify a valid function symbol")
+            error("--skip-sym must specify a valid function symbol")
 
         log.debug(f"Parsed symbols to explicitly include for analysis {skip_sym}")
     else:
@@ -131,199 +208,213 @@ def analyze(
 
     # check if overlapping symbols
     if set(skip_sym) & set(include_sym):
-        error(f"Cannot have same symbols in both --include-sym and --skip-sym.")
+        error("Cannot have same symbols in both --include-sym and --skip-sym.")
 
     log.info(f"Running fuzzability analysis on {target}")
-    if target.is_file():
-        run_on_file(
-            target,
-            export,
-            list_ignored,
-            include_sym,
-            include_nontop,
-            skip_sym,
-            skip_stripped,
-            ignore_metrics,
-            score_weights,
-        )
-    elif target.is_dir():
-        run_on_workspace(
-            target,
-            export,
-            list_ignored,
-            include_sym,
-            include_nontop,
-            skip_sym,
-            skip_stripped,
-            ignore_metrics,
-            score_weights,
-        )
 
+    # Prioritize loading binja as a backend; this will not work if the license is
+    # personal/student, so fall back to miasm.
+    back: AnalysisBackend
+    if backend == "miasm":
+        from fuzzable.analysis import AnalysisException
 
-def run_on_file(
-    target: Path,
-    export: t.Optional[Path],
-    list_ignored: bool,
-    include_sym: t.List[str],
-    include_nontop: bool,
-    skip_sym: t.List[str],
-    skip_stripped: bool,
-    ignore_metrics: bool,
-    score_weights: t.List[float],
-) -> None:
-    """Runs analysis on a single source code file or binary file."""
-    analyzer: t.TypeVar[AnalysisBackend]
-
-    extension = target.suffix
-    if extension in SOURCE_FILE_EXTS:
-        analyzer = AstAnalysis(
-            [target],
-            include_sym=include_sym,
-            include_nontop=include_nontop,
-            score_weights=score_weights,
-        )
-    else:
-        # Prioritize loading binja as a backend, this will not
-        # work if the license is personal/student.
         try:
-            import sys
+            from fuzzable.backend.miasm import MiasmAnalysis
 
-            sys.tracebacklimit = 0
-
-            from binaryninja.binaryview import BinaryViewType
-
-            bv = BinaryViewType.get_view_of_file(target)
-            bv.update_analysis_and_wait()
-
-            from fuzzable.analysis.binja import BinjaAnalysis
-
-            analyzer = BinjaAnalysis(
-                bv,
+            back = MiasmAnalysis(
+                target,
                 include_sym=include_sym,
                 include_nontop=include_nontop,
                 skip_sym=skip_sym,
                 skip_stripped=skip_stripped,
                 score_weights=score_weights,
-                headless=True,
             )
+        except (ModuleNotFoundError, AnalysisException) as err:
+            error(f"miasm failed on {target}. Reason: {err}")
 
-        # didn't work, try to load angr as a fallback instead
-        except (RuntimeError, ModuleNotFoundError, ImportError):
-            log.warning(
-                f"Cannot load Binary Ninja as a backend. Attempting to load angr instead."
-            )
-            try:
-                from fuzzable.analysis.angr import AngrAnalysis
+    elif backend == "binja":
+        import sys
 
-                analyzer = AngrAnalysis(
-                    target,
-                    include_sym=include_sym,
-                    include_nontop=include_nontop,
-                    skip_sym=skip_sym,
-                    skip_stripped=skip_stripped,
-                    score_weights=score_weights,
-                )
-            except ModuleNotFoundError as err:
-                error(f"Unsupported target {target}. Reason: {err}")
+        sys.tracebacklimit = 0
 
-    log.info(f"Running fuzzable analysis with the {str(analyzer)} analyzer")
-    results = analyzer.run()
-    print_table(target, results, analyzer.skipped, ignore_metrics, list_ignored)
-    if export:
-        export_results(export, results)
+        from binaryninja.binaryview import BinaryViewType
 
+        bv = BinaryViewType.get_view_of_file(target)
+        bv.update_analysis_and_wait()
 
-def run_on_workspace(
-    target: Path,
-    export: t.Optional[Path],
-    list_ignored: bool,
-    include_sym: t.List[str],
-    include_nontop: bool,
-    skip_sym: t.List[str],
-    skip_stripped: bool,  # not used, maybe until we support multiple binaries
-    ignore_metrics: bool,
-    score_weights: t.List[float],
-) -> None:
-    """
-    Given a workspace, recursively iterate and parse out all of the source code files
-    that are present. This is not currently supported on workspaces of binaries/libraries.
-    """
-    source_files = []
-    for subdir, _, files in os.walk(target):
-        for file in files:
-            if Path(file).suffix in SOURCE_FILE_EXTS:
-                log.info(f"Adding {file} to set of source code to analyze")
-                source_files += [Path(os.path.join(subdir, file))]
+        from fuzzable.backend.binja import BinjaAnalysis
 
-    if len(source_files) == 0:
-        error(
-            "No C/C++ source code found in the workspace. fuzzable currently does not support parsing on workspaces with multiple binaries."
+        back = BinjaAnalysis(
+            bv,
+            include_sym=include_sym,
+            include_nontop=include_nontop,
+            skip_sym=skip_sym,
+            skip_stripped=skip_stripped,
+            score_weights=score_weights,
         )
 
-    analyzer = AstAnalysis(
-        source_files,
-        include_sym=include_sym,
-        include_nontop=include_nontop,
-        skip_sym=skip_sym,
-        score_weights=score_weights,
-        basedir=target,
-    )
-    log.info(f"Running fuzzable analysis with the {str(analyzer)} analyzer")
-    results = analyzer.run()
-    print_table(target, results, analyzer.skipped, ignore_metrics, list_ignored)
-    if export:
-        export_results(export, results)
+    elif backend == "ghidra":
+        raise NotImplementedError
+
+    log.info(f"Running fuzzable analysis with the {str(back)} analyzer")
+    results = back.rank()
+    if json:
+        click.echo(json.dumps([res.asdict() for res in results]))
+    else:
+        print_table(target, results, back.skipped, ignore_metrics, list_ignored)
 
 
-@app.command()
-def create_harness(
+@app.command("snapshot-fuzz")
+@click.argument("target", type=click.Path(path_type=Path, exists=True))
+@click.option(
+    "-n",
+    "--symbol-name",
+    "symbol_name",
+    default=None,
+    help="Function symbol to snapshot-fuzz. If omitted, the top-ranked fuzzable "
+    "function is used.",
+)
+@click.option(
+    "--iterations", default=2000, type=int, help="Number of fuzzing iterations."
+)
+@click.option(
+    "--buffer-arg",
+    default=0,
+    type=int,
+    help="Zero-based index of the buffer-pointer argument.",
+)
+@click.option(
+    "--size-arg",
+    default=1,
+    type=int,
+    help="Zero-based index of the buffer-length argument.",
+)
+@click.option(
+    "--crash-dir",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Directory to write crashing inputs to.",
+)
+def snapshot_fuzz(
     target: Path,
-    symbol_name: str = typer.Option(
-        ...,
-        "-n",
-        "--symbol_name",
-        help="Names of function symbol to create a fuzzing harness to target. Source not supported yet.",
-    ),
-    out_so_name: t.Optional[Path] = typer.Option(
-        None,
-        "-s",
-        "--out_so_name",
-        help="Specify to set output `.so` path of a transformed ELF binary for binary targets.",
-    ),
-    out_harness: t.Optional[Path] = typer.Option(
-        None,
-        "-o",
-        "--out_harness",
-        help="Specify to set output harness template file path.",
-    ),
+    symbol_name: str | None,
+    iterations: int,
+    buffer_arg: int,
+    size_arg: int,
+    crash_dir: Path | None,
 ):
-    """Synthesize a AFL++/libFuzzer harness for a given symbol in a binary target."""
+    """
+    Dumb binary-only snapshot fuzzing with miasm-based emulation.
+    """
+    from fuzzable.harnessing.harness import select_top_target
+    from fuzzable.harnessing.snapshot import SnapshotFuzzer
 
-    if not target.is_file():
-        error(f"Target path `{target}` does not exist.")
+    # default to the highest-ranked fuzzable function when no symbol is given
+    if symbol_name is None:
+        try:
+            symbol_name = select_top_target(target)
+        except ValueError as err:
+            error(str(err))
+        log.info(f"No symbol given; selected top-ranked target `{symbol_name}`")
 
     try:
-        import lief
-    except (RuntimeError, ModuleNotFoundError, ImportError):
-        error("Could not import LIEF library to parse binary.")
-
-    # if a binary, check if executable or library. if executable, use LIEF to
-    # copy, export the symbol and transform to shared object.
-    binary = lief.parse(str(target))
-    if binary is None:
-        error(
-            "Wrong filetype, or does not support synthesizing harnesses for C/C++ source code yet."
+        fuzzer = SnapshotFuzzer(
+            target, symbol_name, buffer_arg=buffer_arg, size_arg=size_arg
         )
+    except ValueError as err:
+        error(str(err))
 
-    # resolve paths appropriately
-    if out_so_name:
-        out_so_name = out_so_name.expanduser()
+    log.info(f"Snapshot-fuzzing `{symbol_name}` in `{target}` for {iterations} iters")
+    crashes = fuzzer.fuzz(iterations=iterations)
 
-    if out_harness:
-        out_harness = out_harness.expanduser()
+    if not crashes:
+        log.info("No crashes found.")
+        return
 
-    log.info(f"Running harness generation for `{target}` on symbol `{symbol_name}`.")
-    shared_obj = generate.transform_elf_to_so(target, binary, symbol_name, out_so_name)
-    generate.generate_harness(shared_obj, symbol_name, output=out_harness)
+    error_start = click.style("CRASHES", fg="white", bg="red")
+    click.echo(f"\n{error_start} {len(crashes)} unique memory-safety violation(s):\n")
+    for index, crash in enumerate(crashes):
+        click.echo(
+            f"  #{index} size={crash.size} pc={hex(crash.pc)} "
+            f"exception={hex(crash.exception)}"
+        )
+        if crash_dir is not None:
+            crash_dir.mkdir(parents=True, exist_ok=True)
+            out = crash_dir / f"crash_{index}_{crash.size}"
+            out.write_bytes(crash.data)
+            click.echo(f"     written to {out}")
 
-    log.info("Done!")
+
+@app.command("harness")
+@click.argument("target", type=click.Path(path_type=Path, exists=True))
+@click.option(
+    "-n",
+    "--symbol-name",
+    "symbol_name",
+    default=None,
+    help="Target function symbol. If omitted, the top-ranked fuzzable function is used.",
+)
+@click.option(
+    "--engine",
+    type=click.Choice(["libafl-qemu"]),
+    default="libafl-qemu",
+    help="Snapshot-fuzzing engine the bundle targets.",
+)
+@click.option(
+    "-o",
+    "--out-dir",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Output directory for the campaign bundle (default: <symbol>_harness).",
+)
+@click.option("--data-reg", default=None, help="Override the input-pointer register.")
+@click.option("--size-reg", default=None, help="Override the input-length register.")
+@click.option(
+    "--max-len", default=0x1000, type=int, help="Maximum injected input size."
+)
+def harness(
+    target: Path,
+    symbol_name: str | None,
+    engine: str,
+    out_dir: Path | None,
+    data_reg: str | None,
+    size_reg: str | None,
+    max_len: int,
+):
+    """
+    Generate a ready-to-run snapshot-fuzzing campaign bundle from static analysis.
+
+    Derives the target's address and input/length registers and emits a config,
+    harness driver, build/run scripts, seeds, and a dictionary for the chosen
+    engine (LibAFL-QEMU). Requires no source and no symbol export.
+    """
+    from fuzzable.harnessing.harness import build_spec, emit_bundle
+
+    try:
+        spec = build_spec(
+            target,
+            symbol=symbol_name,
+            data_reg=data_reg,
+            size_reg=size_reg,
+            max_input_size=max_len,
+        )
+    except ValueError as err:
+        error(str(err))
+
+    destination = out_dir or Path(f"{spec.symbol}_harness")
+    files = emit_bundle(spec, destination, engine=engine)
+
+    click.echo(
+        f"\nGenerated {engine} campaign for "
+        + click.style(spec.symbol, fg="green")
+        + f" @ {spec.func_addr_hex} "
+        + f"({spec.data_reg}=buffer, {spec.size_reg}=size)\n"
+    )
+    click.echo(f"  bundle: {destination}/")
+    for path in files:
+        click.echo(f"    - {path.relative_to(destination)}")
+    click.echo(f"\n  next: cd {destination} && ./build.sh && ./run.sh")
+
+
+if __name__ == "__main__":
+    app()
